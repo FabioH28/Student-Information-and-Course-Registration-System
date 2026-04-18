@@ -1,8 +1,9 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, User, BookOpen, CalendarDays, GraduationCap,
-  Sparkles, AlertTriangle, MessageCircle, Users, Settings,
-  ClipboardList, BarChart3, Calendar, ChevronLeft, LogOut, Bot, X
+  Sparkles, AlertTriangle, Users, Settings,
+  ClipboardList, BarChart3, Calendar, ChevronLeft, LogOut, Bot, X,
+  CheckSquare, DollarSign, FileText, CreditCard, ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -37,8 +38,39 @@ const adminNav: NavItem[] = [
   { title: "Settings", icon: Settings, path: "/admin/settings" },
 ];
 
+const instructorNav: NavItem[] = [
+  { title: "Dashboard", icon: LayoutDashboard, path: "/instructor" },
+  { title: "My Courses", icon: BookOpen, path: "/instructor/courses" },
+  { title: "Attendance", icon: CheckSquare, path: "/instructor/attendance" },
+  { title: "Grades", icon: GraduationCap, path: "/instructor/grades" },
+  { title: "Roster", icon: Users, path: "/instructor/roster" },
+];
+
+const academicStaffNav: NavItem[] = [
+  { title: "Dashboard", icon: LayoutDashboard, path: "/academic-staff" },
+  { title: "Course Catalog", icon: BookOpen, path: "/academic-staff/courses" },
+  { title: "Registrations", icon: ClipboardList, path: "/academic-staff/registrations" },
+  { title: "Grades", icon: GraduationCap, path: "/academic-staff/grades" },
+  { title: "Students", icon: Users, path: "/academic-staff/students" },
+];
+
+const financeStaffNav: NavItem[] = [
+  { title: "Dashboard", icon: LayoutDashboard, path: "/finance-staff" },
+  { title: "Payments", icon: CreditCard, path: "/finance-staff/payments" },
+  { title: "Invoices", icon: FileText, path: "/finance-staff/invoices" },
+  { title: "Holds", icon: ShieldAlert, path: "/finance-staff/holds" },
+];
+
+const navMap: Record<string, NavItem[]> = {
+  student: studentNav,
+  admin: adminNav,
+  instructor: instructorNav,
+  "academic-staff": academicStaffNav,
+  "finance-staff": financeStaffNav,
+};
+
 interface AppSidebarProps {
-  role: "student" | "admin";
+  role: "student" | "admin" | "instructor" | "academic-staff" | "finance-staff";
   collapsed: boolean;
   onToggle: () => void;
   mobileOpen?: boolean;
@@ -48,7 +80,7 @@ interface AppSidebarProps {
 export function AppSidebar({ role, collapsed, onToggle, mobileOpen = false, onMobileClose }: AppSidebarProps) {
   const location = useLocation();
   const isMobile = useIsMobile();
-  const items = role === "student" ? studentNav : adminNav;
+  const items = navMap[role] ?? studentNav;
 
   if (isMobile) {
     return (

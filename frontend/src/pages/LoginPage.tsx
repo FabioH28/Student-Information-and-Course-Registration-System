@@ -6,13 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const roles = [
+  { label: "Student", value: "/student" },
+  { label: "Instructor", value: "/instructor" },
+  { label: "Academic Staff", value: "/academic-staff" },
+  { label: "Finance Staff", value: "/finance-staff" },
+  { label: "System Admin", value: "/admin" },
+];
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("/student");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/student");
+    navigate(selectedRole);
   };
 
   return (
@@ -95,11 +104,18 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="remember" className="rounded border-border" />
-              <label htmlFor="remember" className="text-sm text-muted-foreground">
-                Remember me
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role (dev only)</Label>
+              <select
+                id="role"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="h-11 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+              >
+                {roles.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
             </div>
             <Button
               type="submit"

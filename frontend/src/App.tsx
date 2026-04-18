@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import LoginPage from "./pages/LoginPage";
+
 import StudentLayout from "./layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentProfile from "./pages/student/StudentProfile";
@@ -24,6 +25,10 @@ import SemesterManagement from "./pages/admin/SemesterManagement";
 import RegistrationOverview from "./pages/admin/RegistrationOverview";
 import Analytics from "./pages/admin/Analytics";
 import AdminSettings from "./pages/admin/AdminSettings";
+
+import InstructorLayout from "./layouts/InstructorLayout";
+import AcademicStaffLayout from "./layouts/AcademicStaffLayout";
+import FinanceStaffLayout from "./layouts/FinanceStaffLayout";
 
 import NotFound from "./pages/NotFound";
 
@@ -58,6 +63,29 @@ const App = () => (
             <Route path="registrations" element={<RegistrationOverview />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<AdminSettings />} />
+          </Route>
+
+          <Route path="/instructor" element={<InstructorLayout />}>
+            <Route index element={<NotFound />} />
+            <Route path="courses" element={<NotFound />} />
+            <Route path="attendance" element={<NotFound />} />
+            <Route path="grades" element={<NotFound />} />
+            <Route path="roster" element={<NotFound />} />
+          </Route>
+
+          <Route path="/academic-staff" element={<AcademicStaffLayout />}>
+            <Route index element={<NotFound />} />
+            <Route path="courses" element={<NotFound />} />
+            <Route path="registrations" element={<NotFound />} />
+            <Route path="grades" element={<NotFound />} />
+            <Route path="students" element={<NotFound />} />
+          </Route>
+
+          <Route path="/finance-staff" element={<FinanceStaffLayout />}>
+            <Route index element={<NotFound />} />
+            <Route path="payments" element={<NotFound />} />
+            <Route path="invoices" element={<NotFound />} />
+            <Route path="holds" element={<NotFound />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
