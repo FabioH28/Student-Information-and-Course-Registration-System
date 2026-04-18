@@ -27,8 +27,24 @@ import Analytics from "./pages/admin/Analytics";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 import InstructorLayout from "./layouts/InstructorLayout";
+import InstructorDashboard from "./pages/instructor/InstructorDashboard";
+import MyCourses from "./pages/instructor/MyCourses";
+import AttendancePage from "./pages/instructor/AttendancePage";
+import GradesManagement from "./pages/instructor/GradesManagement";
+import Roster from "./pages/instructor/Roster";
+
 import AcademicStaffLayout from "./layouts/AcademicStaffLayout";
+import AcademicDashboard from "./pages/academic-staff/AcademicDashboard";
+import CourseCatalogManagement from "./pages/academic-staff/CourseCatalogManagement";
+import RegistrationsManagement from "./pages/academic-staff/RegistrationsManagement";
+import GradesView from "./pages/academic-staff/GradesView";
+import StudentsView from "./pages/academic-staff/StudentsView";
+
 import FinanceStaffLayout from "./layouts/FinanceStaffLayout";
+import FinanceDashboard from "./pages/finance-staff/FinanceDashboard";
+import PaymentsPage from "./pages/finance-staff/PaymentsPage";
+import InvoicesPage from "./pages/finance-staff/InvoicesPage";
+import HoldsPage from "./pages/finance-staff/HoldsPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -66,26 +82,26 @@ const App = () => (
           </Route>
 
           <Route path="/instructor" element={<InstructorLayout />}>
-            <Route index element={<NotFound />} />
-            <Route path="courses" element={<NotFound />} />
-            <Route path="attendance" element={<NotFound />} />
-            <Route path="grades" element={<NotFound />} />
-            <Route path="roster" element={<NotFound />} />
+            <Route index element={<InstructorDashboard />} />
+            <Route path="courses" element={<MyCourses />} />
+            <Route path="attendance" element={<AttendancePage />} />
+            <Route path="grades" element={<GradesManagement />} />
+            <Route path="roster" element={<Roster />} />
           </Route>
 
           <Route path="/academic-staff" element={<AcademicStaffLayout />}>
-            <Route index element={<NotFound />} />
-            <Route path="courses" element={<NotFound />} />
-            <Route path="registrations" element={<NotFound />} />
-            <Route path="grades" element={<NotFound />} />
-            <Route path="students" element={<NotFound />} />
+            <Route index element={<AcademicDashboard />} />
+            <Route path="courses" element={<CourseCatalogManagement />} />
+            <Route path="registrations" element={<RegistrationsManagement />} />
+            <Route path="grades" element={<GradesView />} />
+            <Route path="students" element={<StudentsView />} />
           </Route>
 
           <Route path="/finance-staff" element={<FinanceStaffLayout />}>
-            <Route index element={<NotFound />} />
-            <Route path="payments" element={<NotFound />} />
-            <Route path="invoices" element={<NotFound />} />
-            <Route path="holds" element={<NotFound />} />
+            <Route index element={<FinanceDashboard />} />
+            <Route path="payments" element={<PaymentsPage />} />
+            <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="holds" element={<HoldsPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
