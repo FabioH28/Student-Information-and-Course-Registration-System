@@ -53,6 +53,20 @@ A web-based Campus Information System for managing academic operations, student 
 | Manage system settings | No | No | No | No | No | Yes |
 | Full system access | No | No | No | No | No | Yes |
 
+
+
+
+## Role Definitions
+
+- **Student:** Accesses personal academic and financial information, registers for courses, and views timetable, grades, and attendance.
+- **Instructor:** Manages teaching-related activities for assigned courses, including grading, attendance, and course-related communication.
+- **Academic Staff:** Handles academic administration such as registration, scheduling, course catalog management, and student academic records.
+- **Finance Staff:** Manages tuition, fees, payment verification, and financial records.
+- **Communication Staff:** Manages announcements, news, events, and public communication content.
+- **System Admin:** Has full control over users, roles, permissions, and system settings.
+
+
+
 ## Repository Structure
 
 ```
