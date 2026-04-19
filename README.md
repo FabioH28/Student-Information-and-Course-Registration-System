@@ -21,19 +21,37 @@ A web-based Campus Information System for managing academic operations, student 
 
 ## User Roles & Permissions
 
-| Feature | Student | Instructor | Academic Staff | Finance Staff | System Admin |
-|---|---|---|---|---|---|
-| View own timetable | Yes | Yes | Yes | No | Yes |
-| View grades | Own only | Own course students | Yes | No | Optional |
-| Edit grades | No | Yes (own courses) | Optional | No | No |
-| Mark attendance | No | Yes (own courses) | Optional | No | No |
-| Course registration | Yes | No | Yes | No | No |
-| Manage course catalog | No | No | Yes | No | No |
-| View payment status | Own only | No | Optional | Yes | Optional |
-| Record payments | No | No | No | Yes | No |
-| Manage users/roles | No | No | No | No | Yes |
+## User Roles & Permissions
 
-> "Optional" = permission flag configurable per user account.
+| Feature | Student | Instructor | Academic Staff | Finance Staff | Communication Staff | System Admin |
+|---|---|---|---|---|---|---|
+| View own profile | Yes | Yes | Yes | Yes | Yes | Yes |
+| Edit own profile | Yes | Yes | Yes | Yes | Yes | Yes |
+| View own timetable | Yes | Yes | Yes | No | No | Yes |
+| View grades | Yes (own only) | Yes (own course students) | Yes | No | No | Yes |
+| Edit grades | No | Yes | Yes | No | No | No |
+| Mark attendance | No | Yes | Yes | No | No | No |
+| View attendance records | Yes (own only) | Yes (own course students) | Yes | No | No | Yes |
+| Course registration | Yes | No | Yes | No | No | No |
+| View enrolled courses | Yes (own only) | Yes (own courses) | Yes | No | No | Yes |
+| Manage course catalog | No | No | Yes | No | No | Yes |
+| Manage semester offerings | No | No | Yes | No | No | Yes |
+| Manage timetable/scheduling | No | No | Yes | No | No | Yes |
+| Manage exam schedules | No | No | Yes | No | No | Yes |
+| View academic records | Yes (own only) | Yes (own course students) | Yes | No | No | Yes |
+| Manage student academic records | No | No | Yes | No | No | Yes |
+| View payment status | Yes (own only) | No | No | Yes | No | Yes |
+| Record/verify payments | No | No | No | Yes | No | Yes |
+| Manage invoices/fees | No | No | No | Yes | No | Yes |
+| Create announcements/news | No | Yes | Yes | No | Yes | Yes |
+| Manage announcements/news | No | Yes | Yes | No | Yes | Yes |
+| Create/manage events | No | No | Yes | No | Yes | Yes |
+| Send notifications | No | Yes | Yes | Yes | Yes | Yes |
+| Upload public media/files for announcements | No | No | Yes | No | Yes | Yes |
+| View reports/dashboard | Yes (own only) | Yes (own courses) | Yes | Yes | Yes | Yes |
+| Manage users/roles | No | No | No | No | No | Yes |
+| Manage system settings | No | No | No | No | No | Yes |
+| Full system access | No | No | No | No | No | Yes |
 
 ## Repository Structure
 
