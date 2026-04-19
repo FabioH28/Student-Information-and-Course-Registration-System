@@ -66,7 +66,7 @@ App runs at `http://localhost:8080`
 
 | Name | Role |
 |---|---|
-| Fabio Hysa | Team Member |
+| Fabio Hysa | Team Leader |
 | Kleart Adri | Team Member |
 | Arbri Gaba | Team Member |
 | Helio Myrteza | Team Member |
