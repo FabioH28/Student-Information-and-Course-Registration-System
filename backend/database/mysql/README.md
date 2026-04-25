@@ -13,6 +13,8 @@ The authentication model assumes institution-issued accounts are provisioned by 
 
 ## Files
 
+- `cis.sql`
+  Combined clean import file for XAMPP/phpMyAdmin handoff; generated from the modular SQL scripts below
 - `01_schema.sql`
   Creates the `cis` database and all core tables
 - `02_seed_reference.sql`
@@ -33,6 +35,8 @@ The authentication model assumes institution-issued accounts are provisioned by 
   Optional demo-user seed covering every final role and core academic, finance, and communications workflows
 
 ## Import Order
+
+For a one-file XAMPP/phpMyAdmin setup, import `cis.sql`.
 
 Use this order in phpMyAdmin or the MySQL CLI:
 

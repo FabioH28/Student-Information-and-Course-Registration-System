@@ -63,6 +63,14 @@ DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@127.0.0.1:3306/cis
 
 Import these SQL files in order. The files create the `cis` database, schema, views, reference data, catalog data, RBAC roles, and demo users.
 
+For the easiest XAMPP/phpMyAdmin import, use the combined file:
+
+```text
+backend/database/mysql/cis.sql
+```
+
+Or import the modular scripts manually:
+
 ```powershell
 mysql -u root -p < backend/database/mysql/01_schema.sql
 mysql -u root -p < backend/database/mysql/02_seed_reference.sql
