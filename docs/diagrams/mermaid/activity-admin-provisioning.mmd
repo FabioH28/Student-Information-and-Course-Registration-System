@@ -1,0 +1,20 @@
+flowchart TD
+    start([Admin opens create-account dialog])
+    select[Select account type]
+    enter[Enter identity and organizational data]
+    validate{Required fields valid?}
+    generate[Generate institutional number and temporary password]
+    createUser[Create user and profile records]
+    roleAssign[Assign role and default permissions]
+    inbox[Create onboarding notification]
+    email{Email integration enabled?}
+    send[Send onboarding email]
+    handoff[Show one-time credential handoff]
+    done([Account provisioned])
+    fix([Correct validation errors])
+
+    start --> select --> enter --> validate
+    validate -- No --> fix --> enter
+    validate -- Yes --> generate --> createUser --> roleAssign --> inbox --> email
+    email -- Yes --> send --> handoff --> done
+    email -- No --> handoff --> done

@@ -1,0 +1,43 @@
+flowchart LR
+    subgraph Client[Presentation Layer]
+        browser[Browser]
+        react[React SPA]
+        authProvider[Auth Provider]
+        queryLayer[API Client and React Query]
+        pages[Student, Teacher, Admin Pages]
+    end
+
+    subgraph Service[Application Layer]
+        router[FastAPI Routers]
+        deps[Auth and Role Dependencies]
+        services[Business Services]
+        security[Security and Token Services]
+    end
+
+    subgraph Persistence[Data Layer]
+        session[Database Session]
+        mysql[(MySQL Database)]
+    end
+
+    subgraph CrossCutting[Cross-Cutting Concerns]
+        audit[Audit Logging]
+        notifications[Notification Generation]
+        mail[Email Delivery Adapter\nplanned]
+    end
+
+    browser --> react
+    react --> authProvider
+    react --> queryLayer
+    authProvider --> queryLayer
+    queryLayer --> router
+    pages --> queryLayer
+
+    router --> deps
+    router --> services
+    deps --> security
+    services --> session
+    session --> mysql
+
+    services --> audit
+    services --> notifications
+    services -.-> mail

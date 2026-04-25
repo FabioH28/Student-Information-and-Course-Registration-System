@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CIS Requirements Specification</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-soft: #eef3ff;
+      --text: #162033;
+      --muted: #5c6980;
+      --line: #d9e1ef;
+      --accent: #3a67f7;
+      --accent-soft: rgba(58, 103, 247, 0.12);
+      --accent-2: #7a4ff5;
+      --success: #0f9f6e;
+      --warning: #d97706;
+      --shadow: 0 20px 50px rgba(22, 32, 51, 0.10);
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(58, 103, 247, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(122, 79, 245, 0.12), transparent 32%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 32px 24px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      margin-bottom: 28px;
+      padding: 22px;
+      border-radius: var(--radius-md);
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: var(--shadow);
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+      line-height: 1.15;
+    }
+
+    .brand p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 0.95rem;
+    }
+
+    .toc h2 {
+      margin: 0 0 14px;
+      font-size: 0.84rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .toc a {
+      display: block;
+      margin-bottom: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: var(--muted);
+      transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+
+    .toc a:hover {
+      background: var(--panel-soft);
+      color: var(--accent);
+      transform: translateX(3px);
+    }
+
+    main {
+      padding: 36px;
+    }
+
+    .hero,
+    .section {
+      background: var(--panel);
+      border: 1px solid rgba(217, 225, 239, 0.9);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 34px;
+      margin-bottom: 24px;
+      background:
+        linear-gradient(160deg, rgba(58, 103, 247, 0.08), rgba(122, 79, 245, 0.05)),
+        var(--panel);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero h2 {
+      margin: 16px 0 14px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      max-width: 880px;
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .meta-grid,
+    .card-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .meta-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .card-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .meta-card,
+    .card,
+    .callout {
+      padding: 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .meta-card span,
+    .card span {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .meta-card strong,
+    .card strong {
+      font-size: 1.02rem;
+      line-height: 1.45;
+    }
+
+    .section {
+      margin-bottom: 24px;
+      padding: 28px;
+    }
+
+    .section h3 {
+      margin: 0 0 12px;
+      font-size: 1.7rem;
+    }
+
+    .section > p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 840px;
+      background: #fff;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    th {
+      background: #f8faff;
+      font-size: 0.86rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .pill.success {
+      background: rgba(15, 159, 110, 0.12);
+      color: var(--success);
+    }
+
+    .pill.warning {
+      background: rgba(217, 119, 6, 0.12);
+      color: var(--warning);
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      background: #f7f9ff;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .meta-grid,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      main {
+        padding: 18px;
+      }
+
+      .hero,
+      .section,
+      .sidebar {
+        padding: 20px;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .layout {
+        display: block;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      main {
+        padding: 0;
+      }
+
+      .hero,
+      .section {
+        box-shadow: none;
+        border: 1px solid #d9d9d9;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>CIS</h1>
+        <p>Campus Information System Requirements Specification</p>
+      </div>
+      <nav class="toc">
+        <h2>Contents</h2>
+        <a href="#overview">1. System Overview</a>
+        <a href="#stakeholders">2. Stakeholders and Actors</a>
+        <a href="#domain">3. Domain Model and Context</a>
+        <a href="#functional">4. Functional Requirements</a>
+        <a href="#non-functional">5. Non-Functional Requirements</a>
+        <a href="#business-rules">6. Business Rules</a>
+        <a href="#interfaces">7. Interfaces and Integrations</a>
+        <a href="#data-reporting">8. Data and Reporting</a>
+        <a href="#assumptions">9. Assumptions and Constraints</a>
+        <a href="#acceptance">10. Acceptance Position</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <div class="eyebrow">MSc-Level Project Artifact</div>
+        <h2>CIS — Campus Information System Requirements Specification</h2>
+        <p>
+          This document defines the intended production-ready scope for the Campus Information System (CIS),
+          a role-based web platform that supports academic operations, student services, finance, campus
+          communications, and institutional administration through a React frontend, FastAPI backend, and
+          relational SQL data layer.
+        </p>
+        <div class="meta-grid">
+          <div class="meta-card">
+            <span>Project Title</span>
+            <strong>CIS — Campus Information System</strong>
+          </div>
+          <div class="meta-card">
+            <span>Delivery Context</span>
+            <strong>Web-Based Multi-Role University Platform</strong>
+          </div>
+          <div class="meta-card">
+            <span>Technology Baseline</span>
+            <strong>React, FastAPI, MySQL/MariaDB</strong>
+          </div>
+          <div class="meta-card">
+            <span>Revision Date</span>
+            <strong>12 April 2026</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="overview">
+        <h3>1. System Overview</h3>
+        <p>
+          CIS is intended to function as a centralized campus operations platform. It consolidates user identity,
+          academic administration, registrations, attendance, grade management, finance operations, campus clubs,
+          announcements, events, and student-facing service interactions into a single controlled environment.
+        </p>
+        <div class="two-col">
+          <div class="card">
+            <span>Primary Objective</span>
+            <strong>
+              Provide a secure and extensible institutional platform that reduces operational fragmentation and
+              offers consistent workflows for students, teachers, and administrators.
+            </strong>
+          </div>
+          <div class="card">
+            <span>Scope Boundary</span>
+            <strong>
+              The system covers internal campus processes and excludes external payment gateways, external LMS
+              grading tools, and public admissions portals unless explicitly integrated later.
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="stakeholders">
+        <h3>2. Stakeholders and Actors</h3>
+        <p>
+          The platform is shaped around a role-based operating model. Each actor interacts with CIS according to
+          institutional authority, data ownership, and operational responsibility.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Actor</th>
+                <th>Description</th>
+                <th>Core Responsibilities</th>
+                <th>Primary Access Scope</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Student</strong></td>
+                <td>Registered learner using the portal for self-service academic and service operations.</td>
+                <td>View profile, register courses, review timetable, read inbox, inspect grades, review finance, join clubs.</td>
+                <td>Own records only</td>
+              </tr>
+              <tr>
+                <td><strong>Teacher</strong></td>
+                <td>Academic staff member responsible for instructional delivery and course-level records.</td>
+                <td>Manage attendance, gradebooks, course rosters, academic alerts, and course communication.</td>
+                <td>Assigned offerings and related students</td>
+              </tr>
+              <tr>
+                <td><strong>Administrator</strong></td>
+                <td>Institutional operator with broad authority across academic, finance, and governance workflows.</td>
+                <td>Provision users, maintain academic structure, manage finance, publish notices, supervise data.</td>
+                <td>Institution-wide</td>
+              </tr>
+              <tr>
+                <td><strong>System Owner</strong></td>
+                <td>Institutional sponsor accountable for governance, compliance, and roadmap prioritization.</td>
+                <td>Approve policy, validate acceptance criteria, oversee deployment and operational maturity.</td>
+                <td>Governance and oversight</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="domain">
+        <h3>3. Domain Model and Context</h3>
+        <p>
+          The CIS domain is composed of interconnected academic, operational, and student-service subdomains.
+          The underlying data model must support clear ownership, lifecycle tracking, and auditability across each
+          context.
+        </p>
+        <div class="card-grid">
+          <div class="card">
+            <span>Identity and Access</span>
+            <strong>Users, roles, permissions, sessions, password resets, audit logs, security events.</strong>
+          </div>
+          <div class="card">
+            <span>Academic Structure</span>
+            <strong>Departments, programs, terms, courses, offerings, schedules, prerequisites.</strong>
+          </div>
+          <div class="card">
+            <span>Student Records</span>
+            <strong>Profiles, enrollment status, attendance, grades, performance indicators, academic holds.</strong>
+          </div>
+          <div class="card">
+            <span>Finance</span>
+            <strong>Invoices, payments, financial holds, scholarship or aid decisions, ledger visibility.</strong>
+          </div>
+          <div class="card">
+            <span>Engagement</span>
+            <strong>Clubs, memberships, join requests, events, announcements, notifications.</strong>
+          </div>
+          <div class="card">
+            <span>Advisory and Support</span>
+            <strong>Recommendations, AI chat history, inbox items, support requests, system settings.</strong>
+          </div>
+        </div>
+        <div class="footer-note">
+          The domain boundary assumes a single institution with controlled internal user creation. Accounts are
+          provisioned by administrators, and role membership determines functional visibility and authorization.
+        </div>
+        <div class="table-wrap" style="margin-top: 18px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Bounded Context</th>
+                <th>Representative Entities</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Identity and Governance</strong></td>
+                <td>users, roles, permissions, refresh_tokens, password_reset_tokens, audit_logs</td>
+                <td>Authenticate users, enforce authorization, and preserve traceability of sensitive actions.</td>
+              </tr>
+              <tr>
+                <td><strong>Academic Administration</strong></td>
+                <td>departments, programs, academic_terms, courses, course_offerings, teacher_assignments</td>
+                <td>Model the academic structure that governs who teaches what, when, and under which program context.</td>
+              </tr>
+              <tr>
+                <td><strong>Student Academic Record</strong></td>
+                <td>students, registrations, attendance_sessions, attendance_records, grade_components, grade_records</td>
+                <td>Maintain the operational and evidential record of a student’s academic engagement and outcomes.</td>
+              </tr>
+              <tr>
+                <td><strong>Finance Operations</strong></td>
+                <td>invoices, invoice_items, payments, financial_holds, aid_awards</td>
+                <td>Track receivables, payments, student financial standing, and related restrictions or support.</td>
+              </tr>
+              <tr>
+                <td><strong>Campus Engagement</strong></td>
+                <td>clubs, club_memberships, club_join_requests, announcements, events, event_registrations, notifications</td>
+                <td>Support communication, participation, and non-academic student experience services.</td>
+              </tr>
+              <tr>
+                <td><strong>Advisory and Support</strong></td>
+                <td>recommendations, support_requests, ai_chat_sessions, ai_chat_messages, system_settings</td>
+                <td>Enable guided assistance, student support interaction, and configurable platform behavior.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="functional">
+        <h3>4. Functional Requirements</h3>
+        <p>
+          Functional requirements are expressed as production-oriented system capabilities. Each item reflects the
+          intended target state for a complete institutional deployment.
+        </p>
+        <div class="card-grid" style="margin-bottom: 18px;">
+          <div class="card">
+            <span>Access Control</span>
+            <strong>Institution-managed accounts, authenticated sessions, forced password change, and role-based access control.</strong>
+          </div>
+          <div class="card">
+            <span>Academic Operations</span>
+            <strong>Programs, courses, offerings, registration, timetable, attendance, grading, and progression controls.</strong>
+          </div>
+          <div class="card">
+            <span>Campus Services</span>
+            <strong>Finance, clubs, announcements, events, notifications, and student support interactions.</strong>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>Priority</th>
+                <th>Acceptance Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>FR-001</strong></td>
+                <td>The system shall allow administrators to provision student, teacher, and administrative staff accounts using institution-issued email addresses.</td>
+                <td><span class="pill">High</span></td>
+                <td>Admin can create accounts and receive generated identifiers and temporary credentials.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-002</strong></td>
+                <td>The system shall enforce role-based access so that students, teachers, and administrators only see functions relevant to their authorization scope.</td>
+                <td><span class="pill">High</span></td>
+                <td>Navigation, routes, and APIs are restricted by role.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-003</strong></td>
+                <td>The system shall require first-time users to change their temporary password before they can access normal workspace features.</td>
+                <td><span class="pill">High</span></td>
+                <td>New users are redirected to password change before reaching role dashboards.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-004</strong></td>
+                <td>The system shall support password reset requests and controlled password reset confirmation.</td>
+                <td><span class="pill">High</span></td>
+                <td>Password reset tokens can be issued, validated, and consumed safely.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-005</strong></td>
+                <td>The system shall maintain a master academic structure including departments, programs, academic terms, courses, and course offerings.</td>
+                <td><span class="pill">High</span></td>
+                <td>Admin can create, edit, and review academic structures and offering metadata.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-006</strong></td>
+                <td>The system shall allow administrators to assign teachers to specific course offerings.</td>
+                <td><span class="pill">High</span></td>
+                <td>Assigned offerings appear in the relevant teacher workspace.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-007</strong></td>
+                <td>The system shall allow students to browse the course catalog and review recommendation cues during registration.</td>
+                <td><span class="pill">Medium</span></td>
+                <td>Course catalog and suggested courses are visible within registration workflows.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-008</strong></td>
+                <td>The system shall allow students to add or drop eligible course registrations subject to academic and administrative rules.</td>
+                <td><span class="pill">High</span></td>
+                <td>Registration requests succeed only when prerequisite, capacity, and hold conditions are satisfied.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-009</strong></td>
+                <td>The system shall expose a student timetable view derived from confirmed registered offerings.</td>
+                <td><span class="pill">Medium</span></td>
+                <td>Students can review scheduled classes by day and time period.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-010</strong></td>
+                <td>The system shall allow teachers to create attendance sessions and mark attendance for students enrolled in their assigned offerings.</td>
+                <td><span class="pill">High</span></td>
+                <td>Teacher attendance submissions persist and appear in student-facing records.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-011</strong></td>
+                <td>The system shall allow teachers to define grade components, record marks, and publish final grade outcomes for assigned offerings.</td>
+                <td><span class="pill">High</span></td>
+                <td>Teacher grade workflows update student grade views and academic summaries.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-012</strong></td>
+                <td>The system shall allow students to view their academic profile, attendance-related alerts, and published grades.</td>
+                <td><span class="pill">High</span></td>
+                <td>Student dashboard and grade screens reflect live backend data.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-013</strong></td>
+                <td>The system shall maintain an inbox that aggregates warnings, academic notices, finance reminders, and campus service notifications.</td>
+                <td><span class="pill">High</span></td>
+                <td>Users can review unread items and mark or archive eligible notifications.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-014</strong></td>
+                <td>The system shall allow administrators to publish announcements and events, and shall expose them to relevant student users.</td>
+                <td><span class="pill">High</span></td>
+                <td>News and events created by admins appear in student news views.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-015</strong></td>
+                <td>The system shall allow students to browse campus clubs and submit join requests or event participation requests where permitted.</td>
+                <td><span class="pill">Medium</span></td>
+                <td>Join requests and event registrations are stored and reviewable.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-016</strong></td>
+                <td>The system shall allow administrators to create and manage club records and review membership requests.</td>
+                <td><span class="pill">Medium</span></td>
+                <td>Club management operations update student-facing club views.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-017</strong></td>
+                <td>The system shall allow administrators to issue student invoices, record payments, and apply or release finance holds.</td>
+                <td><span class="pill">High</span></td>
+                <td>Finance balances, invoice history, and hold status are reflected in student and admin views.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-018</strong></td>
+                <td>The system shall allow students to inspect finance statements and submit finance support requests.</td>
+                <td><span class="pill">Medium</span></td>
+                <td>Student finance pages expose balances, invoice records, and support request workflows.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-019</strong></td>
+                <td>The system shall maintain audit records for security-sensitive actions including login, password reset, account provisioning, and role-sensitive administration.</td>
+                <td><span class="pill">High</span></td>
+                <td>Audit entries are recorded with actor, action, and timestamp metadata.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-020</strong></td>
+                <td>The system shall allow administrators to activate, suspend, or reset user accounts without direct database intervention.</td>
+                <td><span class="pill">High</span></td>
+                <td>User lifecycle actions are executable through the admin workspace.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-021</strong></td>
+                <td>The system shall support a teacher workspace that presents assigned courses, rosters, attendance workflows, gradebook workflows, and teacher inbox items.</td>
+                <td><span class="pill">High</span></td>
+                <td>Teachers can access all required instructional workflows from dedicated screens.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-022</strong></td>
+                <td>The system shall provide administrative reporting summaries for academic, finance, user, and engagement modules.</td>
+                <td><span class="pill">Medium</span></td>
+                <td>Dashboard cards and overview lists are populated by live backend data.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-023</strong></td>
+                <td>The system shall store AI chat sessions and messages for student support interactions where institutional policy permits.</td>
+                <td><span class="pill warning">Planned</span></td>
+                <td>Chat sessions persist with message history and can be extended with richer assistance logic later.</td>
+              </tr>
+              <tr>
+                <td><strong>FR-024</strong></td>
+                <td>The system shall expose stable API endpoints for frontend consumption across authentication, academic services, finance, clubs, news, and notifications.</td>
+                <td><span class="pill">High</span></td>
+                <td>Frontend modules interact with backend routes rather than local mock data.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="non-functional">
+        <h3>5. Non-Functional Requirements</h3>
+        <p>
+          Non-functional requirements define the quality envelope within which CIS must operate. These constraints
+          are essential for institutional trust, continuity, and operational viability.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Category</th>
+                <th>Requirement</th>
+                <th>Target Position</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>NFR-001</strong></td>
+                <td>Security</td>
+                <td>All authenticated API calls shall require verified tokens and enforce server-side authorization checks.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-002</strong></td>
+                <td>Security</td>
+                <td>Passwords shall be stored only as secure hashes and never in reversible plaintext form.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-003</strong></td>
+                <td>Security</td>
+                <td>The platform shall provide login throttling or temporary lockout after repeated failed authentication attempts.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-004</strong></td>
+                <td>Performance</td>
+                <td>Typical dashboard and list views shall load within acceptable user-perceived latency under normal institutional usage.</td>
+                <td>Target: sub-2s for common queries</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-005</strong></td>
+                <td>Availability</td>
+                <td>The system shall support planned deployment patterns that allow routine backup, restart, and recovery without data corruption.</td>
+                <td>High priority</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-006</strong></td>
+                <td>Data Integrity</td>
+                <td>Relational constraints, identifiers, and transactional operations shall prevent duplicate or contradictory academic records.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-007</strong></td>
+                <td>Auditability</td>
+                <td>Security-sensitive and governance-sensitive actions shall be traceable through timestamped audit records.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-008</strong></td>
+                <td>Usability</td>
+                <td>The interface shall be role-appropriate, mobile-responsive, and understandable to non-technical institutional users.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-009</strong></td>
+                <td>Accessibility</td>
+                <td>The platform should align with accessible semantic structure, readable contrast, and keyboard-operable primary workflows.</td>
+                <td>Target: WCAG-aligned practice</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-010</strong></td>
+                <td>Maintainability</td>
+                <td>The system shall be modular enough that frontend, backend, and database layers can evolve without wholesale rewrites.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-011</strong></td>
+                <td>Scalability</td>
+                <td>The architecture shall permit growth in users, records, and modules through conventional database and API scaling practices.</td>
+                <td>Target: institution-scale growth</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-012</strong></td>
+                <td>Interoperability</td>
+                <td>The platform shall use stable REST-based API contracts and environment-driven configuration for deployment portability.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-013</strong></td>
+                <td>Privacy</td>
+                <td>Users shall only be able to view personally identifiable or academic information for which they are explicitly authorized.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-014</strong></td>
+                <td>Reliability</td>
+                <td>Validation failures and operational errors shall return predictable and understandable responses without exposing sensitive internals.</td>
+                <td>Mandatory</td>
+              </tr>
+              <tr>
+                <td><strong>NFR-015</strong></td>
+                <td>Deployment</td>
+                <td>The application shall support containerized or equivalent repeatable deployment for backend, frontend, and database services.</td>
+                <td><span class="pill success">Preferred baseline</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="business-rules">
+        <h3>6. Business Rules</h3>
+        <p>
+          Business rules provide enforceable governance constraints that shape user behavior, data integrity, and
+          procedural consistency across the platform.
+        </p>
+        <div class="two-col">
+          <div class="callout">
+            <ul>
+              <li>Accounts shall be created by administrators; self-registration is outside the current institutional scope.</li>
+              <li>Student identifiers and employee identifiers should be system-generated to avoid duplication and inconsistent formatting.</li>
+              <li>Students may only register for offerings that belong to accessible academic structures and satisfy prerequisite or policy rules.</li>
+              <li>Teachers may only manage attendance and grades for offerings explicitly assigned to them.</li>
+              <li>Published final grades shall be treated as authoritative academic outcomes unless superseded by approved administrative correction.</li>
+            </ul>
+          </div>
+          <div class="callout">
+            <ul>
+              <li>Finance holds may restrict downstream student actions such as registration if institutional policy requires it.</li>
+              <li>Announcements and events shall be attributable to an authorized publisher and carry publication metadata.</li>
+              <li>Notifications shall be linked to a recipient or recipient group and support status transitions such as unread, read, or archived.</li>
+              <li>Password reset and password change actions shall invalidate vulnerable session states where appropriate.</li>
+              <li>Critical user lifecycle operations shall leave auditable evidence in the system log.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-note">
+          These business rules are intended to be enforced primarily by the backend and database layers so that data
+          integrity does not depend on frontend behavior alone.
+        </div>
+      </section>
+
+      <section class="section" id="interfaces">
+        <h3>7. Interfaces and Integrations</h3>
+        <p>
+          CIS is designed as a modular web system. Internal interface contracts must remain stable as the system
+          evolves from prototype maturity into operational deployment.
+        </p>
+        <div class="card-grid">
+          <div class="card">
+            <span>Presentation Layer</span>
+            <strong>React and TypeScript frontend delivering student, teacher, and admin workspaces through browser-based interfaces.</strong>
+          </div>
+          <div class="card">
+            <span>Application Layer</span>
+            <strong>FastAPI backend exposing authenticated REST endpoints for identity, academics, finance, messaging, and operations.</strong>
+          </div>
+          <div class="card">
+            <span>Persistence Layer</span>
+            <strong>Relational SQL database supporting transactional integrity, reference data, and auditable operational history.</strong>
+          </div>
+          <div class="card">
+            <span>Future Integrations</span>
+            <strong>Email delivery, external payment providers, document storage, analytics pipelines, and notification channels.</strong>
+          </div>
+        </div>
+        <div class="table-wrap" style="margin-top: 18px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Interface</th>
+                <th>Purpose</th>
+                <th>Current Position</th>
+                <th>Future Extension</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Frontend to Backend API</strong></td>
+                <td>Operational interaction between web clients and business logic services.</td>
+                <td>REST JSON over authenticated HTTP</td>
+                <td>Versioned contract expansion and stronger automated contract testing</td>
+              </tr>
+              <tr>
+                <td><strong>Backend to Database</strong></td>
+                <td>Persistence, transaction management, and reporting queries.</td>
+                <td>SQL via MySQL/MariaDB connectivity</td>
+                <td>Migrations, replication, and managed database deployment</td>
+              </tr>
+              <tr>
+                <td><strong>Authentication Support</strong></td>
+                <td>Password lifecycle, token issuance, and secure session handling.</td>
+                <td>Internal auth service</td>
+                <td>Email-backed password recovery and optional SSO integration</td>
+              </tr>
+              <tr>
+                <td><strong>Notification Delivery</strong></td>
+                <td>User-facing alerts and inbox content.</td>
+                <td>Internal notification records</td>
+                <td>Email, SMS, and push delivery adapters</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="data-reporting">
+        <h3>8. Data and Reporting Requirements</h3>
+        <p>
+          Data architecture and reporting features must support operational accuracy, decision support, and
+          institutional accountability.
+        </p>
+        <div class="two-col">
+          <div class="callout">
+            <ul>
+              <li>The system shall maintain structured master data for departments, programs, terms, courses, and offerings.</li>
+              <li>The system shall preserve role-linked profile data for students, teachers, staff, and administrators.</li>
+              <li>The system shall maintain transactional records for registrations, attendance sessions, grade items, invoices, payments, and membership requests.</li>
+              <li>The system shall support dashboard-level aggregation for academic load, outstanding balances, engagement counts, and notice volume.</li>
+            </ul>
+          </div>
+          <div class="callout">
+            <ul>
+              <li>Reports should support filtering by term, department, role, status, and time range.</li>
+              <li>Administrative exports should be possible for academic and finance review processes.</li>
+              <li>Audit and security records should be queryable for incident review and governance checks.</li>
+              <li>AI chat history, if retained, should be subject to institutional policy, retention, and privacy controls.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-note">
+          Recommended core reporting outputs include enrollment summaries, attendance exceptions, grade distributions,
+          receivables summaries, club participation counts, event activity summaries, and user status reports.
+        </div>
+      </section>
+
+      <section class="section" id="assumptions">
+        <h3>9. Assumptions and Constraints</h3>
+        <p>
+          These assumptions provide context for design decisions and help distinguish immediate delivery scope from
+          future expansion opportunities.
+        </p>
+        <div class="card-grid">
+          <div class="card">
+            <span>Assumption A1</span>
+            <strong>The institution remains the sole authority responsible for account creation and role assignment.</strong>
+          </div>
+          <div class="card">
+            <span>Assumption A2</span>
+            <strong>The initial deployment targets a single campus or a logically unified institutional data boundary.</strong>
+          </div>
+          <div class="card">
+            <span>Constraint C1</span>
+            <strong>The current solution depends on institutional SQL infrastructure and environment-based secret management.</strong>
+          </div>
+          <div class="card">
+            <span>Constraint C2</span>
+            <strong>External integrations such as live email delivery and payment gateway settlement are deferred until later phases.</strong>
+          </div>
+        </div>
+        <div class="footer-note">
+          The platform should be treated as expansion-ready rather than feature-final. The architecture is expected to
+          evolve toward deeper automation, stronger testing, and richer operational integrations without requiring a
+          structural rewrite.
+        </div>
+      </section>
+
+      <section class="section" id="acceptance">
+        <h3>10. Acceptance Position</h3>
+        <p>
+          A production-ready CIS release should be accepted only when the platform satisfies both functional
+          completeness and operational readiness expectations for a university-grade information system.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Acceptance Area</th>
+                <th>Minimum Condition</th>
+                <th>Readiness Level</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Identity and Security</strong></td>
+                <td>Login, password change, password reset, lockout, audit logging, and role enforcement work reliably.</td>
+                <td><span class="pill">Required</span></td>
+              </tr>
+              <tr>
+                <td><strong>Academic Operations</strong></td>
+                <td>Admins can manage academic structures, teachers can manage teaching records, and students can complete registration and review outcomes.</td>
+                <td><span class="pill">Required</span></td>
+              </tr>
+              <tr>
+                <td><strong>Finance and Services</strong></td>
+                <td>Invoices, payments, holds, notices, clubs, events, and notifications operate through controlled backend workflows.</td>
+                <td><span class="pill">Required</span></td>
+              </tr>
+              <tr>
+                <td><strong>Operational Quality</strong></td>
+                <td>Validation, logging, backup posture, deployment repeatability, and baseline automated testing are in place.</td>
+                <td><span class="pill warning">Must mature before launch</span></td>
+              </tr>
+              <tr>
+                <td><strong>Future Enhancement Readiness</strong></td>
+                <td>The architecture supports continued expansion such as richer analytics, messaging, external integrations, and policy automation.</td>
+                <td><span class="pill success">Strategic objective</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="footer-note">
+          In academic project terms, this specification positions CIS as a professionally scoped enterprise information
+          system with clear domain boundaries, traceable responsibilities, and a strong basis for further implementation,
+          validation, and research-oriented evaluation.
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

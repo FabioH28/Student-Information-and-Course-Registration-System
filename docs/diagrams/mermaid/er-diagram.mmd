@@ -1,0 +1,63 @@
+erDiagram
+    USERS ||--o{ USER_ROLES : has
+    ROLES ||--o{ USER_ROLES : assigned_to
+    ROLES ||--o{ ROLE_PERMISSIONS : grants
+    PERMISSIONS ||--o{ ROLE_PERMISSIONS : included_in
+
+    DEPARTMENTS ||--o{ PROGRAMS : contains
+    USERS ||--|| STUDENT_PROFILES : maps_to
+    USERS ||--|| TEACHER_PROFILES : maps_to
+    USERS ||--|| ADMIN_PROFILES : maps_to
+    PROGRAMS ||--o{ STUDENT_PROFILES : enrolls
+    DEPARTMENTS ||--o{ TEACHER_PROFILES : employs
+
+    PROGRAMS ||--o{ PROGRAM_COURSES : defines
+    COURSES ||--o{ PROGRAM_COURSES : appears_in
+    COURSES ||--o{ COURSE_PREREQUISITES : target_course
+    COURSES ||--o{ COURSE_PREREQUISITES : prerequisite_course
+
+    ACADEMIC_TERMS ||--o{ COURSE_OFFERINGS : schedules
+    COURSES ||--o{ COURSE_OFFERINGS : instantiated_as
+    TEACHER_PROFILES ||--o{ COURSE_OFFERINGS : delivered_by
+    COURSE_OFFERINGS ||--o{ COURSE_MEETINGS : contains
+
+    STUDENT_PROFILES ||--o{ ENROLLMENTS : submits
+    COURSE_OFFERINGS ||--o{ ENROLLMENTS : accepts
+    ACADEMIC_TERMS ||--o{ STUDENT_TERM_RECORDS : measures
+    STUDENT_PROFILES ||--o{ STUDENT_TERM_RECORDS : receives
+
+    COURSE_OFFERINGS ||--o{ ATTENDANCE_SESSIONS : has
+    ATTENDANCE_SESSIONS ||--o{ ATTENDANCE_RECORDS : produces
+    ENROLLMENTS ||--o{ ATTENDANCE_RECORDS : belongs_to
+
+    COURSE_OFFERINGS ||--o{ GRADE_COMPONENTS : defines
+    GRADE_COMPONENTS ||--o{ GRADE_RECORDS : produces
+    ENROLLMENTS ||--o{ GRADE_RECORDS : receives
+    ENROLLMENTS ||--o| FINAL_GRADES : finalizes
+
+    FEE_CATEGORIES ||--o{ STUDENT_INVOICES : categorizes
+    STUDENT_PROFILES ||--o{ STUDENT_INVOICES : billed_to
+    STUDENT_INVOICES ||--o{ INVOICE_ITEMS : contains
+    STUDENT_INVOICES ||--o{ PAYMENT_ALLOCATIONS : settled_by
+    PAYMENTS ||--o{ PAYMENT_ALLOCATIONS : allocates
+    STUDENT_PROFILES ||--o{ FINANCIAL_HOLDS : affected_by
+
+    CLUB_CATEGORIES ||--o{ CLUBS : groups
+    CLUBS ||--o{ CLUB_MEMBERSHIPS : has
+    STUDENT_PROFILES ||--o{ CLUB_MEMBERSHIPS : joins
+    CLUBS ||--o{ CLUB_JOIN_REQUESTS : receives
+    STUDENT_PROFILES ||--o{ CLUB_JOIN_REQUESTS : requests
+
+    NEWS_POSTS ||--o{ NEWS_POST_AUDIENCES : targets
+    CAMPUS_EVENTS ||--o{ CAMPUS_EVENT_AUDIENCES : targets
+    CAMPUS_EVENTS ||--o{ CAMPUS_EVENT_REGISTRATIONS : collects
+    STUDENT_PROFILES ||--o{ CAMPUS_EVENT_REGISTRATIONS : registers
+
+    NOTIFICATIONS ||--o{ NOTIFICATION_RECIPIENTS : addressed_to
+    USERS ||--o{ NOTIFICATION_RECIPIENTS : receives
+
+    USERS ||--o{ AUTH_REFRESH_TOKENS : issues
+    USERS ||--o{ PASSWORD_RESET_TOKENS : requests
+    USERS ||--o{ AUDIT_LOGS : triggers
+    USERS ||--o{ AI_CHAT_SESSIONS : opens
+    AI_CHAT_SESSIONS ||--o{ AI_CHAT_MESSAGES : contains

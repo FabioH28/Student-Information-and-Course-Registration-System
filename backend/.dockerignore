@@ -1,0 +1,16 @@
+.venv
+.env
+*.log
+*.out
+*.err
+database/xampp-backups
+database/mysql/backup-*.sql
+__pycache__
+app/__pycache__
+app/api/__pycache__
+app/core/__pycache__
+app/db/__pycache__
+app/schemas/__pycache__
+app/services/__pycache__
+tests/__pycache__
+*.pyc

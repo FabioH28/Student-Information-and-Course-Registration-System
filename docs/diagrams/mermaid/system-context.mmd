@@ -1,0 +1,24 @@
+flowchart TB
+    student[Student]
+    teacher[Teacher]
+    admin[Administrator]
+    support[Finance and Registrar Staff]
+
+    subgraph CIS[CIS - Campus Information System]
+        web[React Web Client]
+        api[FastAPI Application]
+        db[(MySQL Academic Database)]
+    end
+
+    mail[Email Provider\nplanned production integration]
+    storage[Document and Asset Storage\nfuture integration]
+
+    student -->|views profile, courses, grades,\nfinance, clubs, news, chatbot| web
+    teacher -->|manages attendance,\ngrades, assigned courses| web
+    admin -->|governs users, offerings,\nfinance, clubs, news| web
+    support -->|operational administration| web
+
+    web -->|JSON over HTTPS| api
+    api -->|SQL queries and transactions| db
+    api -.->|password reset,\nnotifications| mail
+    api -.->|receipts, files,\nattachments| storage

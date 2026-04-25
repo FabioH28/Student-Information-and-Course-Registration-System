@@ -1,0 +1,26 @@
+sequenceDiagram
+    actor User
+    participant UI as React Login Page
+    participant API as FastAPI Auth API
+    participant Sec as Security Service
+    participant DB as MySQL
+
+    User->>UI: Submit email and password
+    UI->>API: POST /auth/login
+    API->>DB: Load user and roles
+    DB-->>API: User record, password hash, status
+    API->>Sec: Verify password and account state
+
+    alt Credentials valid and account active
+        Sec-->>API: Verified
+        API->>Sec: Create access and refresh tokens
+        Sec-->>API: Signed tokens
+        API->>DB: Persist refresh token and audit log
+        API-->>UI: Access token, refresh token, user profile
+        UI->>UI: Store session and route by role
+        UI-->>User: Open student, teacher, or admin workspace
+    else Invalid credentials or locked account
+        API->>DB: Increment failure counters
+        API-->>UI: 401 or 423 response
+        UI-->>User: Show error feedback
+    end

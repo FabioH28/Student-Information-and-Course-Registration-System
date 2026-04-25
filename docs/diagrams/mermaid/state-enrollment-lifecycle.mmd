@@ -1,0 +1,16 @@
+stateDiagram-v2
+    [*] --> DraftSelection
+    DraftSelection --> PendingApproval : submit
+    DraftSelection --> Confirmed : auto-approve
+    PendingApproval --> Confirmed : admin approves
+    PendingApproval --> Waitlisted : capacity reached
+    PendingApproval --> Rejected : rule violation
+    Waitlisted --> Confirmed : seat released
+    Confirmed --> Dropped : student drops
+    Confirmed --> Completed : term closes successfully
+    Confirmed --> Cancelled : offering cancelled
+    Waitlisted --> Cancelled : term closes
+    Rejected --> [*]
+    Dropped --> [*]
+    Completed --> [*]
+    Cancelled --> [*]
