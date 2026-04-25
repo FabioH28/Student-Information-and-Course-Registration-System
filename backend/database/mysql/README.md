@@ -1,4 +1,4 @@
-# CIS MySQL Schema
+﻿# CIS MySQL Schema
 
 Production-style MySQL schema for the Campus Information System project, designed for:
 
@@ -21,10 +21,10 @@ The authentication model assumes institution-issued accounts are provisioned by 
   Adds reporting views for enrollment, finance, and risk dashboards
 - `04_seed_core_data.sql`
   Optional core campus seed data for departments, terms, courses, clubs, news, and events without pre-creating user accounts
-- `05_seed_epoka_catalog.sql`
-  Optional EPOKA University curriculum seed with real course titles and ECTS values sourced from official program pages, without importing professor or staff names
-- `06_seed_umt_msc_catalog.sql`
-  Optional University Metropolitan Tirana master-level seed with real course titles and ECTS values sourced from official curriculum material, without importing professor or staff names
+- `05_seed_undergraduate_catalog.sql`
+  Optional sample undergraduate catalog curriculum seed with sample course titles and ECTS values, without importing professor or staff names
+- `06_seed_graduate_catalog.sql`
+  Optional sample graduate catalog master-level seed with sample course titles and ECTS values, without importing professor or staff names
 - `07_normalize_catalog_identity.sql`
   Optional normalization step that rewrites imported department, program, and course codes into original CIS-style internal catalog codes while keeping the curriculum content and ECTS values
 - `08_migrate_rbac_roles.sql`
@@ -40,9 +40,9 @@ Use this order in phpMyAdmin or the MySQL CLI:
 2. `02_seed_reference.sql`
 3. `03_views.sql`
 4. `04_seed_core_data.sql` (optional but recommended for a usable first-run workspace)
-5. `05_seed_epoka_catalog.sql` (optional but recommended if you want a more realistic academic catalog)
-6. `06_seed_umt_msc_catalog.sql` (optional but recommended if you want realistic master's-level catalog data from University Metropolitan Tirana)
-7. `07_normalize_catalog_identity.sql` (optional but recommended if you want the visible catalog codes to be original to CIS instead of mirroring source institutions)
+5. `05_seed_undergraduate_catalog.sql` (optional but recommended if you want a more realistic academic catalog)
+6. `06_seed_graduate_catalog.sql` (optional but recommended if you want realistic master's-level catalog data)
+7. `07_normalize_catalog_identity.sql` (optional but recommended if you want the visible catalog codes to be original to CIS instead of mirroring external institutions)
 8. `08_migrate_rbac_roles.sql` (optional but recommended if you are upgrading an older three-role dataset)
 9. `09_seed_demo_users.sql` (optional but recommended if you want ready-made users for each final role)
 
@@ -53,8 +53,8 @@ mysql -u root -p < backend/database/mysql/01_schema.sql
 mysql -u root -p < backend/database/mysql/02_seed_reference.sql
 mysql -u root -p < backend/database/mysql/03_views.sql
 mysql -u root -p < backend/database/mysql/04_seed_core_data.sql
-mysql -u root -p < backend/database/mysql/05_seed_epoka_catalog.sql
-mysql -u root -p < backend/database/mysql/06_seed_umt_msc_catalog.sql
+mysql -u root -p < backend/database/mysql/05_seed_undergraduate_catalog.sql
+mysql -u root -p < backend/database/mysql/06_seed_graduate_catalog.sql
 mysql -u root -p < backend/database/mysql/07_normalize_catalog_identity.sql
 mysql -u root -p < backend/database/mysql/08_migrate_rbac_roles.sql
 mysql -u root -p < backend/database/mysql/09_seed_demo_users.sql
@@ -67,8 +67,8 @@ mysql -u root -p < backend/database/mysql/09_seed_demo_users.sql
 3. Import `02_seed_reference.sql`.
 4. Import `03_views.sql`.
 5. Import `04_seed_core_data.sql` if you want the academic, finance, communications, and System Admin workspaces to start with academic structure and campus content.
-6. Import `05_seed_epoka_catalog.sql` if you want the course catalog to include real EPOKA University program data and ECTS values.
-7. Import `06_seed_umt_msc_catalog.sql` if you want the master's catalog to include real University Metropolitan Tirana program data and ECTS values.
+6. Import `05_seed_undergraduate_catalog.sql` if you want the course catalog to include sample undergraduate catalog data and ECTS values.
+7. Import `06_seed_graduate_catalog.sql` if you want the master's catalog to include sample graduate catalog data and ECTS values.
 8. Import `07_normalize_catalog_identity.sql` if you want the visible catalog codes and program labels to be original to your CIS project.
 9. Import `08_migrate_rbac_roles.sql` if you are upgrading an older dataset with legacy role codes.
 10. Import `09_seed_demo_users.sql` if you want sample users for every final role.
@@ -94,6 +94,8 @@ mysql -u root -p < backend/database/mysql/09_seed_demo_users.sql
 - This schema is written to be friendly to XAMPP MySQL/MariaDB.
 - It is intentionally normalized so the FastAPI layer can enforce business rules cleanly.
 - The frontend now includes dedicated student, instructor, academic staff, finance staff, communication staff, and System Admin workspaces.
-- `05_seed_epoka_catalog.sql` adds an `ects_credits` column to `courses` if it is not already present, so official ECTS values can coexist with the app's existing integer credit field.
-- `06_seed_umt_msc_catalog.sql` follows the same pattern and currently seeds a documented Metropolitan Tirana MSc catalog without storing any real professor identities.
+- `05_seed_undergraduate_catalog.sql` adds an `ects_credits` column to `courses` if it is not already present, so sample ECTS values can coexist with the app's existing integer credit field.
+- `06_seed_graduate_catalog.sql` follows the same pattern and currently seeds a sample graduate MSc catalog without storing any real professor identities.
 - `07_normalize_catalog_identity.sql` keeps the imported curriculum content but replaces source-style visible codes with original CIS codes so the catalog feels institution-owned rather than copied verbatim.
+
+

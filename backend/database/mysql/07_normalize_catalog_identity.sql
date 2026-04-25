@@ -1,4 +1,4 @@
-USE cis;
+﻿USE cis;
 
 -- Normalize imported academic catalogs so visible codes and labels are original to CIS.
 -- Database primary keys remain internal auto-generated identifiers.
@@ -9,16 +9,16 @@ SET
   code = CASE code
     WHEN 'CEN' THEN 'SCOMP'
     WHEN 'BUSA' THEN 'SBUS'
-    WHEN 'UMTCSIT' THEN 'GCOMP'
+    WHEN 'GRADCSIT' THEN 'GCOMP'
     ELSE code
   END,
   name = CASE code
     WHEN 'CEN' THEN 'School of Computing'
     WHEN 'BUSA' THEN 'School of Business and Informatics'
-    WHEN 'UMTCSIT' THEN 'Graduate School of Computing'
+    WHEN 'GRADCSIT' THEN 'Graduate School of Computing'
     ELSE name
   END
-WHERE code IN ('CEN', 'BUSA', 'UMTCSIT');
+WHERE code IN ('CEN', 'BUSA', 'GRADCSIT');
 
 UPDATE departments
 SET name = CASE code
@@ -34,16 +34,16 @@ SET
   code = CASE code
     WHEN 'BSWE' THEN 'UG-SWE'
     WHEN 'BBINF' THEN 'UG-BINF'
-    WHEN 'UMT-MSSE' THEN 'MSC-SWE'
+    WHEN 'GRAD-MSSE' THEN 'MSC-SWE'
     ELSE code
   END,
   name = CASE code
     WHEN 'BSWE' THEN 'B.Sc. Software Engineering'
     WHEN 'BBINF' THEN 'B.Sc. Business Informatics'
-    WHEN 'UMT-MSSE' THEN 'M.Sc. Software Engineering'
+    WHEN 'GRAD-MSSE' THEN 'M.Sc. Software Engineering'
     ELSE name
   END
-WHERE code IN ('BSWE', 'BBINF', 'UMT-MSSE');
+WHERE code IN ('BSWE', 'BBINF', 'GRAD-MSSE');
 
 UPDATE programs
 SET name = CASE code
@@ -142,3 +142,4 @@ WHERE code IN (
   'SWE401','INF404','SWE402','COM502','BUS561','COM402','AI404','COM403','COM401','INF406','INF407',
   'INF408','SWE590','SWE591'
 );
+

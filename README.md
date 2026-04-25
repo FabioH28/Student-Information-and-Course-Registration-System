@@ -1,4 +1,4 @@
-# CIS - Campus Information System
+﻿# CIS - Campus Information System
 
 CIS is a full-stack campus information system for a university-style environment. It includes a Vite + React + TypeScript frontend, a FastAPI backend, and a MySQL/MariaDB schema with demo data for local development.
 
@@ -68,8 +68,8 @@ mysql -u root -p < backend/database/mysql/01_schema.sql
 mysql -u root -p < backend/database/mysql/02_seed_reference.sql
 mysql -u root -p < backend/database/mysql/03_views.sql
 mysql -u root -p < backend/database/mysql/04_seed_core_data.sql
-mysql -u root -p < backend/database/mysql/05_seed_epoka_catalog.sql
-mysql -u root -p < backend/database/mysql/06_seed_umt_msc_catalog.sql
+mysql -u root -p < backend/database/mysql/05_seed_undergraduate_catalog.sql
+mysql -u root -p < backend/database/mysql/06_seed_graduate_catalog.sql
 mysql -u root -p < backend/database/mysql/07_normalize_catalog_identity.sql
 mysql -u root -p < backend/database/mysql/08_migrate_rbac_roles.sql
 mysql -u root -p < backend/database/mysql/09_seed_demo_users.sql
@@ -164,3 +164,4 @@ Before pushing, verify with:
 ```powershell
 git status --short --ignored
 ```
+

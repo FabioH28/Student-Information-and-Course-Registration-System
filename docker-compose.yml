@@ -1,4 +1,4 @@
-services:
+﻿services:
   db:
     image: mysql:8.0
     container_name: cis-db
@@ -17,8 +17,8 @@ services:
       - ./backend/database/mysql/02_seed_reference.sql:/docker-entrypoint-initdb.d/02_seed_reference.sql:ro
       - ./backend/database/mysql/03_views.sql:/docker-entrypoint-initdb.d/03_views.sql:ro
       - ./backend/database/mysql/04_seed_core_data.sql:/docker-entrypoint-initdb.d/04_seed_core_data.sql:ro
-      - ./backend/database/mysql/05_seed_epoka_catalog.sql:/docker-entrypoint-initdb.d/05_seed_epoka_catalog.sql:ro
-      - ./backend/database/mysql/06_seed_umt_msc_catalog.sql:/docker-entrypoint-initdb.d/06_seed_umt_msc_catalog.sql:ro
+      - ./backend/database/mysql/05_seed_undergraduate_catalog.sql:/docker-entrypoint-initdb.d/05_seed_undergraduate_catalog.sql:ro
+      - ./backend/database/mysql/06_seed_graduate_catalog.sql:/docker-entrypoint-initdb.d/06_seed_graduate_catalog.sql:ro
       - ./backend/database/mysql/07_normalize_catalog_identity.sql:/docker-entrypoint-initdb.d/07_normalize_catalog_identity.sql:ro
       - ./backend/database/mysql/08_migrate_rbac_roles.sql:/docker-entrypoint-initdb.d/08_migrate_rbac_roles.sql:ro
       - ./backend/database/mysql/09_seed_demo_users.sql:/docker-entrypoint-initdb.d/09_seed_demo_users.sql:ro
@@ -63,3 +63,4 @@ services:
 
 volumes:
   mysql_data:
+
