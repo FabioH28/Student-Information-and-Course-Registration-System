@@ -4,13 +4,23 @@ from sqlalchemy.orm import Session
 from app.api.deps import RequestUser, require_permissions
 from app.core.rbac import PERMISSION_FINANCE_DASHBOARD, PERMISSION_FINANCE_MANAGE
 from app.db.session import get_db
-from app.schemas.admin import FinancialHoldCreateRequest, InvoiceCreateRequest, PaymentCreateRequest
+from app.schemas.admin import (
+    FinancialHoldCreateRequest,
+    FinancialHoldUpdateRequest,
+    InvoiceCreateRequest,
+    InvoiceUpdateRequest,
+    PaymentCreateRequest,
+    PaymentUpdateRequest,
+)
 from app.services.admin import get_admin_finance_overview, get_admin_reference_data
 from app.services.admin_phase3 import (
     create_admin_financial_hold,
     create_admin_invoice,
     create_admin_payment,
     release_admin_financial_hold,
+    update_admin_financial_hold,
+    update_admin_invoice,
+    update_admin_payment,
 )
 
 
@@ -41,7 +51,7 @@ def reference_data(
     return get_admin_reference_data(db)
 
 
-@router.post("/invoices", summary="Issue a new student invoice")
+@router.post("/invoices", summary="Create a manual student invoice record")
 def create_invoice(
     payload: InvoiceCreateRequest,
     current_user: RequestUser = Depends(require_permissions(PERMISSION_FINANCE_MANAGE)),
@@ -50,7 +60,17 @@ def create_invoice(
     return create_admin_invoice(db, current_user.id, payload)
 
 
-@router.post("/payments", summary="Record a student payment")
+@router.put("/invoices/{invoice_id}", summary="Update a manual student invoice record")
+def update_invoice(
+    invoice_id: int,
+    payload: InvoiceUpdateRequest,
+    current_user: RequestUser = Depends(require_permissions(PERMISSION_FINANCE_MANAGE)),
+    db: Session = Depends(get_db),
+) -> dict:
+    return update_admin_invoice(db, current_user.id, invoice_id, payload)
+
+
+@router.post("/payments", summary="Create a manual student payment record")
 def create_payment(
     payload: PaymentCreateRequest,
     current_user: RequestUser = Depends(require_permissions(PERMISSION_FINANCE_MANAGE)),
@@ -59,13 +79,33 @@ def create_payment(
     return create_admin_payment(db, current_user.id, payload)
 
 
-@router.post("/holds", summary="Place a financial hold on a student account")
+@router.put("/payments/{payment_id}", summary="Update a manual student payment record")
+def update_payment(
+    payment_id: int,
+    payload: PaymentUpdateRequest,
+    current_user: RequestUser = Depends(require_permissions(PERMISSION_FINANCE_MANAGE)),
+    db: Session = Depends(get_db),
+) -> dict:
+    return update_admin_payment(db, current_user.id, payment_id, payload)
+
+
+@router.post("/holds", summary="Create a student account hold record")
 def create_hold(
     payload: FinancialHoldCreateRequest,
     current_user: RequestUser = Depends(require_permissions(PERMISSION_FINANCE_MANAGE)),
     db: Session = Depends(get_db),
 ) -> dict:
     return create_admin_financial_hold(db, current_user.id, payload)
+
+
+@router.put("/holds/{hold_id}", summary="Update a student account hold record")
+def update_hold(
+    hold_id: int,
+    payload: FinancialHoldUpdateRequest,
+    current_user: RequestUser = Depends(require_permissions(PERMISSION_FINANCE_MANAGE)),
+    db: Session = Depends(get_db),
+) -> dict:
+    return update_admin_financial_hold(db, current_user.id, hold_id, payload)
 
 
 @router.put("/holds/{hold_id}/release", summary="Release a financial hold")

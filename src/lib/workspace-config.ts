@@ -69,7 +69,7 @@ export const workspaceConfigs: Record<AppRole, WorkspaceConfig> = {
       "/student/grades": { title: "Grades", subtitle: "Academic results" },
       "/student/inbox": { title: "Inbox", subtitle: "Alerts, reminders, and campus notifications" },
       "/student/news": { title: "News", subtitle: "Announcements and upcoming campus events" },
-      "/student/finance": { title: "Finance", subtitle: "Tuition, invoices, and payments" },
+      "/student/finance": { title: "Finance", subtitle: "Tuition, invoices, and staff-recorded payments" },
       "/student/clubs": { title: "Clubs", subtitle: "Join and manage student organizations" },
       "/student/chatbot": { title: "AI Assistant", subtitle: "Ask anything" },
     },
@@ -137,7 +137,7 @@ export const workspaceConfigs: Record<AppRole, WorkspaceConfig> = {
       { title: "Profile", icon: User, path: "/finance/profile" },
     ],
     pageTitles: {
-      "/finance": { title: "Finance", subtitle: "Invoices, payments, holds, and finance reporting" },
+      "/finance": { title: "Finance", subtitle: "Manual invoices, payments, holds, and finance records" },
       "/finance/profile": { title: "Profile" },
     },
   },

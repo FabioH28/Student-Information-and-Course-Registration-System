@@ -5,7 +5,7 @@ VALUES
   ('Student', 'Student', 'Accesses personal academic and financial information and self-service student workflows.', TRUE),
   ('Instructor', 'Instructor', 'Manages teaching workflows for assigned course offerings and students.', TRUE),
   ('Academic Staff', 'Academic Staff', 'Handles academic administration, registration, scheduling, and academic records.', TRUE),
-  ('Finance Staff', 'Finance Staff', 'Manages tuition, invoices, payments, and finance records.', TRUE),
+  ('Finance Staff', 'Finance Staff', 'Manages tuition, manual invoices, payment records, and finance records.', TRUE),
   ('Communication Staff', 'Communication Staff', 'Manages announcements, events, media, and public communication content.', TRUE),
   ('System Admin', 'System Admin', 'Manages users, roles, settings, reports, and overall system oversight.', TRUE)
 ON DUPLICATE KEY UPDATE
@@ -31,7 +31,7 @@ VALUES
   ('academic.schedule.manage', 'Manage Scheduling', 'Allows academic staff to manage timetables and scheduling workflows.', 'scheduling', 'manage'),
   ('academic.exams.manage', 'Manage Exam Scheduling', 'Allows academic staff to manage exam schedules.', 'exams', 'manage'),
   ('finance.dashboard.view', 'View Finance Dashboard', 'Allows finance staff to view finance dashboards and reports.', 'finance', 'view_dashboard'),
-  ('finance.records.manage', 'Manage Finance Records', 'Allows finance staff to manage invoices, payments, and holds.', 'finance', 'manage'),
+  ('finance.records.manage', 'Manage Finance Records', 'Allows finance staff to manage manual invoices, payment records, and holds.', 'finance', 'manage'),
   ('communications.dashboard.view', 'View Communications Dashboard', 'Allows staff to view announcement and event management dashboards.', 'communications', 'view_dashboard'),
   ('announcements.manage', 'Manage Announcements', 'Allows staff to create and update announcements and news items.', 'announcements', 'manage'),
   ('events.manage', 'Manage Events', 'Allows staff to create and update campus events and related club workflows.', 'events', 'manage'),

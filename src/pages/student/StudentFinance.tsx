@@ -131,7 +131,7 @@ export default function StudentFinance() {
 
   const finance = financeQuery.data;
   if (!finance) {
-    return <EmptyState title="No finance data yet" description="Invoices, payments, and financial aid details will appear here once they are available." />;
+    return <EmptyState title="No finance data yet" description="Invoices, payments, and financial aid details will appear here once finance staff records them." />;
   }
 
   const totalAid = finance.aid_awards.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -139,7 +139,7 @@ export default function StudentFinance() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Finance" description="Track balances, invoices, and payment activity">
+      <PageHeader title="Finance" description="Review balances, invoices, and staff-recorded payments">
         <Button variant="outline" size="sm" onClick={() => downloadFinanceStatement(finance)}>
           <Download className="mr-2 h-4 w-4" /> Download Statement
         </Button>
@@ -163,7 +163,7 @@ export default function StudentFinance() {
         <StatCard
           title="Payments Recorded"
           value={formatCurrencyValue(totalPayments)}
-          subtitle={`${finance.summary.payment_count} transactions`}
+          subtitle={`${finance.summary.payment_count} records`}
           icon={CreditCard}
           variant="primary"
         />
@@ -192,7 +192,7 @@ export default function StudentFinance() {
           </div>
 
           {finance.invoices.length === 0 ? (
-            <EmptyState title="No invoices issued" description="Once finance records are generated, your invoices will show up here." />
+            <EmptyState title="No invoice records" description="Once finance staff adds invoice records, they will show up here." />
           ) : (
             <div className="space-y-3">
               {finance.invoices.map((invoice, index) => (
@@ -241,7 +241,7 @@ export default function StudentFinance() {
               <span className="font-medium text-success">{formatCurrencyValue(totalAid)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Payments posted</span>
+              <span className="text-muted-foreground">Payments recorded</span>
               <span className="font-medium text-foreground">{formatCurrencyValue(totalPayments)}</span>
             </div>
             <div className="border-t border-border pt-3">
@@ -264,10 +264,10 @@ export default function StudentFinance() {
         transition={{ delay: 0.15 }}
         className="rounded-xl border bg-card p-5 shadow-card"
       >
-        <h3 className="mb-4 font-semibold text-foreground">Recent Payments</h3>
+        <h3 className="mb-4 font-semibold text-foreground">Payment Records</h3>
 
         {finance.payments.length === 0 ? (
-          <EmptyState title="No payments recorded" description="Payment activity will appear here once transactions are posted to your account." />
+          <EmptyState title="No payments recorded" description="Payment records will appear here once finance staff adds them to your account." />
         ) : (
           <div className="space-y-3">
             {finance.payments.map((payment) => (

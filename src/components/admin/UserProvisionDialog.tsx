@@ -200,7 +200,7 @@ const ROLE_COPY: Record<AppRole, { title: string; description: string; submit: s
   },
   [ROLE_FINANCE_STAFF]: {
     title: "Add Finance Staff",
-    description: "Create a finance staff account for invoices, payments, holds, and finance reporting.",
+    description: "Create a finance staff account for manual invoices, payments, holds, and finance records.",
     submit: "Provision Finance Staff",
     identifierLabel: "Employee Number",
   },

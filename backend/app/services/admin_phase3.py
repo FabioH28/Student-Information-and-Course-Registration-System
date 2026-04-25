@@ -13,9 +13,12 @@ from app.schemas.admin import (
     ClubJoinRequestReviewRequest,
     ClubUpsertRequest,
     FinancialHoldCreateRequest,
+    FinancialHoldUpdateRequest,
     InvoiceCreateRequest,
+    InvoiceUpdateRequest,
     NewsPostUpsertRequest,
     PaymentCreateRequest,
+    PaymentUpdateRequest,
     UserRoleUpdateRequest,
     UserStatusUpdateRequest,
 )
@@ -233,7 +236,14 @@ def _get_finance_invoice_item(db: Session, invoice_id: int) -> dict:
               si.balance_amount,
               si.due_date,
               si.status,
-              si.notes
+              si.notes,
+              (
+                SELECT ii.description
+                FROM invoice_items ii
+                WHERE ii.invoice_id = si.id
+                ORDER BY ii.id ASC
+                LIMIT 1
+              ) AS description
             FROM student_invoices si
             JOIN student_profiles sp ON sp.id = si.student_id
             JOIN users u ON u.id = sp.user_id
@@ -263,6 +273,13 @@ def _get_finance_payment_item(db: Session, payment_id: int) -> dict:
               p.paid_at,
               p.status,
               p.notes,
+              (
+                SELECT pa.invoice_id
+                FROM payment_allocations pa
+                WHERE pa.payment_id = p.id
+                ORDER BY pa.id ASC
+                LIMIT 1
+              ) AS invoice_id,
               (
                 SELECT si.invoice_number
                 FROM payment_allocations pa
@@ -308,6 +325,149 @@ def _get_finance_hold_item(db: Session, hold_id: int) -> dict:
     if hold is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial hold not found.")
     return dict(hold)
+
+
+def _ensure_finance_term_exists(db: Session, term_id: int | None) -> None:
+    if term_id is None:
+        return
+
+    term_exists = db.execute(
+        text("SELECT id FROM academic_terms WHERE id = :term_id"),
+        {"term_id": term_id},
+    ).scalar_one_or_none()
+    if term_exists is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Academic term not found.")
+
+
+def _ensure_manual_invoice_balance(total_amount: float, balance_amount: float) -> None:
+    if balance_amount > total_amount:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Balance cannot be greater than invoice total.")
+
+
+def _recalculate_invoice_from_confirmed_payments(db: Session, invoice_id: int) -> None:
+    invoice = db.execute(
+        text(
+            """
+            SELECT id, total_amount, status
+            FROM student_invoices
+            WHERE id = :invoice_id
+            """
+        ),
+        {"invoice_id": invoice_id},
+    ).mappings().first()
+    if invoice is None or invoice["status"] == "void":
+        return
+
+    applied_amount = float(
+        db.execute(
+            text(
+                """
+                SELECT COALESCE(SUM(pa.amount_applied), 0)
+                FROM payment_allocations pa
+                JOIN payments p ON p.id = pa.payment_id
+                WHERE pa.invoice_id = :invoice_id
+                  AND p.status = 'confirmed'
+                """
+            ),
+            {"invoice_id": invoice_id},
+        ).scalar_one()
+        or 0
+    )
+    total_amount = round(float(invoice["total_amount"] or 0), 2)
+    balance_amount = max(round(total_amount - applied_amount, 2), 0)
+    if balance_amount == 0:
+        invoice_status = "paid"
+    elif applied_amount > 0:
+        invoice_status = "partially_paid"
+    else:
+        invoice_status = "overdue" if invoice["status"] == "overdue" else "issued"
+
+    db.execute(
+        text(
+            """
+            UPDATE student_invoices
+            SET balance_amount = :balance_amount,
+                status = :status,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = :invoice_id
+            """
+        ),
+        {
+            "invoice_id": invoice_id,
+            "balance_amount": balance_amount,
+            "status": invoice_status,
+        },
+    )
+
+
+def _replace_payment_invoice_allocation(
+    db: Session,
+    *,
+    payment_id: int,
+    student_id: int,
+    invoice_id: int | None,
+    amount: float,
+    payment_status: str,
+) -> int | None:
+    if invoice_id is None:
+        return None
+
+    invoice_context = db.execute(
+        text(
+            """
+            SELECT
+              si.id,
+              si.student_id,
+              si.invoice_number,
+              si.total_amount,
+              si.status,
+              COALESCE(SUM(CASE WHEN p.status = 'confirmed' THEN pa.amount_applied ELSE 0 END), 0) AS already_applied
+            FROM student_invoices si
+            LEFT JOIN payment_allocations pa ON pa.invoice_id = si.id
+            LEFT JOIN payments p ON p.id = pa.payment_id
+            WHERE si.id = :invoice_id
+            GROUP BY si.id, si.student_id, si.invoice_number, si.total_amount, si.status
+            """
+        ),
+        {"invoice_id": invoice_id},
+    ).mappings().first()
+    if invoice_context is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
+    if int(invoice_context["student_id"]) != student_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The selected invoice does not belong to this student.")
+    if invoice_context["status"] == "void":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payments cannot be linked to a void invoice.")
+
+    total_amount = round(float(invoice_context["total_amount"] or 0), 2)
+    available_balance = max(round(total_amount - float(invoice_context["already_applied"] or 0), 2), 0)
+    if payment_status != "confirmed":
+        available_balance = total_amount
+
+    amount_applied = min(round(float(amount), 2), available_balance)
+    if amount_applied <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This invoice has already been settled.")
+
+    db.execute(
+        text(
+            """
+            INSERT INTO payment_allocations (
+              payment_id,
+              invoice_id,
+              amount_applied
+            ) VALUES (
+              :payment_id,
+              :invoice_id,
+              :amount_applied
+            )
+            """
+        ),
+        {
+            "payment_id": payment_id,
+            "invoice_id": invoice_id,
+            "amount_applied": amount_applied,
+        },
+    )
+    return invoice_id
 
 
 def _get_admin_club_item(db: Session, club_id: int) -> dict:
@@ -435,14 +595,7 @@ def create_admin_invoice(db: Session, actor_user_id: int, payload: InvoiceCreate
 
     admin_profile_id = _get_admin_profile_id(db, actor_user_id)
     student = _get_student_user_context(db, payload.student_id)
-
-    if payload.academic_term_id is not None:
-        term_exists = db.execute(
-            text("SELECT id FROM academic_terms WHERE id = :term_id"),
-            {"term_id": payload.academic_term_id},
-        ).scalar_one_or_none()
-        if term_exists is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Academic term not found.")
+    _ensure_finance_term_exists(db, payload.academic_term_id)
 
     invoice_number = _generate_invoice_number(db)
     amount = round(float(payload.amount), 2)
@@ -547,6 +700,120 @@ def create_admin_invoice(db: Session, actor_user_id: int, payload: InvoiceCreate
     }
 
 
+def update_admin_invoice(db: Session, actor_user_id: int, invoice_id: int, payload: InvoiceUpdateRequest) -> dict:
+    if payload.due_date < payload.issue_date:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Due date cannot be earlier than the issue date.")
+
+    existing = db.execute(
+        text("SELECT id, invoice_number FROM student_invoices WHERE id = :invoice_id"),
+        {"invoice_id": invoice_id},
+    ).mappings().first()
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
+
+    _get_student_user_context(db, payload.student_id)
+    _ensure_finance_term_exists(db, payload.academic_term_id)
+
+    total_amount = round(float(payload.amount), 2)
+    balance_amount = round(float(payload.balance_amount), 2)
+    invoice_status = payload.status
+    if invoice_status in {"paid", "void"}:
+        balance_amount = 0
+    _ensure_manual_invoice_balance(total_amount, balance_amount)
+
+    db.execute(
+        text(
+            """
+            UPDATE student_invoices
+            SET student_id = :student_id,
+                academic_term_id = :academic_term_id,
+                issue_date = :issue_date,
+                due_date = :due_date,
+                subtotal_amount = :subtotal_amount,
+                total_amount = :total_amount,
+                balance_amount = :balance_amount,
+                status = :status,
+                notes = :notes,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = :invoice_id
+            """
+        ),
+        {
+            "invoice_id": invoice_id,
+            "student_id": payload.student_id,
+            "academic_term_id": payload.academic_term_id,
+            "issue_date": payload.issue_date,
+            "due_date": payload.due_date,
+            "subtotal_amount": total_amount,
+            "total_amount": total_amount,
+            "balance_amount": balance_amount,
+            "status": invoice_status,
+            "notes": payload.notes,
+        },
+    )
+
+    item_update = db.execute(
+        text(
+            """
+            UPDATE invoice_items
+            SET description = :description,
+                unit_amount = :unit_amount,
+                line_total = :line_total
+            WHERE invoice_id = :invoice_id
+            ORDER BY id ASC
+            LIMIT 1
+            """
+        ),
+        {
+            "invoice_id": invoice_id,
+            "description": payload.description.strip(),
+            "unit_amount": total_amount,
+            "line_total": total_amount,
+        },
+    )
+    if item_update.rowcount == 0:
+        db.execute(
+            text(
+                """
+                INSERT INTO invoice_items (
+                  invoice_id,
+                  description,
+                  quantity,
+                  unit_amount,
+                  line_total
+                ) VALUES (
+                  :invoice_id,
+                  :description,
+                  1.00,
+                  :unit_amount,
+                  :line_total
+                )
+                """
+            ),
+            {
+                "invoice_id": invoice_id,
+                "description": payload.description.strip(),
+                "unit_amount": total_amount,
+                "line_total": total_amount,
+            },
+        )
+
+    _create_audit_log(
+        db,
+        actor_user_id,
+        "student_invoice",
+        invoice_id,
+        "update",
+        f"Updated manual invoice record {existing['invoice_number']}",
+    )
+    db.commit()
+
+    return {
+        "message": f"Invoice {existing['invoice_number']} was updated successfully.",
+        "invoice": _get_finance_invoice_item(db, invoice_id),
+    }
+
+
 def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreateRequest) -> dict:
     admin_profile_id = _get_admin_profile_id(db, actor_user_id)
     student = _get_student_user_context(db, payload.student_id)
@@ -576,7 +843,7 @@ def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreate
         if int(invoice_context["student_id"]) != payload.student_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The selected invoice does not belong to this student.")
         if invoice_context["status"] == "void":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payments cannot be posted against a void invoice.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment records cannot be linked to a void invoice.")
 
     amount = round(float(payload.amount), 2)
     db.execute(
@@ -666,8 +933,8 @@ def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreate
         user_ids=[int(student["user_id"])],
         category="finance",
         severity="success",
-        title="Payment posted",
-        message=f"A payment of {amount:.2f} USD was recorded on your account.",
+        title="Payment record added",
+        message=f"Finance staff recorded a payment of {amount:.2f} USD on your account.",
         created_by_user_id=actor_user_id,
         action_label="Review finance",
         action_url="/student/finance",
@@ -686,6 +953,117 @@ def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreate
 
     return {
         "message": f"Payment {reference_number} was recorded successfully.",
+        "payment": _get_finance_payment_item(db, payment_id),
+    }
+
+
+def update_admin_payment(db: Session, actor_user_id: int, payment_id: int, payload: PaymentUpdateRequest) -> dict:
+    existing = db.execute(
+        text(
+            """
+            SELECT id, reference_number
+            FROM payments
+            WHERE id = :payment_id
+            """
+        ),
+        {"payment_id": payment_id},
+    ).mappings().first()
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment record not found.")
+
+    _get_student_user_context(db, payload.student_id)
+    amount = round(float(payload.amount), 2)
+    reference_number = payload.reference_number.strip() if payload.reference_number else existing["reference_number"]
+    if not reference_number:
+        reference_number = _generate_payment_reference(db)
+
+    existing_reference = db.execute(
+        text("SELECT id FROM payments WHERE reference_number = :reference_number AND id <> :payment_id LIMIT 1"),
+        {"reference_number": reference_number, "payment_id": payment_id},
+    ).scalar_one_or_none()
+    if existing_reference is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This payment reference number already exists.")
+
+    if payload.invoice_id is not None:
+        invoice_context = db.execute(
+            text(
+                """
+                SELECT id, student_id, status
+                FROM student_invoices
+                WHERE id = :invoice_id
+                """
+            ),
+            {"invoice_id": payload.invoice_id},
+        ).mappings().first()
+        if invoice_context is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
+        if int(invoice_context["student_id"]) != payload.student_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The selected invoice does not belong to this student.")
+        if invoice_context["status"] == "void":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payments cannot be linked to a void invoice.")
+
+    previous_invoice_ids = [
+        int(row["invoice_id"])
+        for row in db.execute(
+            text("SELECT invoice_id FROM payment_allocations WHERE payment_id = :payment_id"),
+            {"payment_id": payment_id},
+        ).mappings().all()
+    ]
+    db.execute(
+        text("DELETE FROM payment_allocations WHERE payment_id = :payment_id"),
+        {"payment_id": payment_id},
+    )
+
+    db.execute(
+        text(
+            """
+            UPDATE payments
+            SET student_id = :student_id,
+                reference_number = :reference_number,
+                payment_method = :payment_method,
+                amount = :amount,
+                paid_at = :paid_at,
+                status = :status,
+                notes = :notes,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = :payment_id
+            """
+        ),
+        {
+            "payment_id": payment_id,
+            "student_id": payload.student_id,
+            "reference_number": reference_number,
+            "payment_method": payload.payment_method,
+            "amount": amount,
+            "paid_at": payload.paid_at,
+            "status": payload.status,
+            "notes": payload.notes,
+        },
+    )
+
+    new_invoice_id = _replace_payment_invoice_allocation(
+        db,
+        payment_id=payment_id,
+        student_id=payload.student_id,
+        invoice_id=payload.invoice_id,
+        amount=amount,
+        payment_status=payload.status,
+    )
+    for affected_invoice_id in sorted(set(previous_invoice_ids + ([new_invoice_id] if new_invoice_id else []))):
+        _recalculate_invoice_from_confirmed_payments(db, affected_invoice_id)
+
+    _create_audit_log(
+        db,
+        actor_user_id,
+        "payment",
+        payment_id,
+        "update",
+        f"Updated manual payment record {reference_number}",
+    )
+    db.commit()
+
+    return {
+        "message": f"Payment {reference_number} was updated successfully.",
         "payment": _get_finance_payment_item(db, payment_id),
     }
 
@@ -746,6 +1124,78 @@ def create_admin_financial_hold(db: Session, actor_user_id: int, payload: Financ
 
     return {
         "message": "Financial hold placed successfully.",
+        "hold": _get_finance_hold_item(db, hold_id),
+    }
+
+
+def update_admin_financial_hold(db: Session, actor_user_id: int, hold_id: int, payload: FinancialHoldUpdateRequest) -> dict:
+    admin_profile_id = _get_admin_profile_id(db, actor_user_id)
+    existing = db.execute(
+        text("SELECT id, status FROM financial_holds WHERE id = :hold_id"),
+        {"hold_id": hold_id},
+    ).mappings().first()
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial hold not found.")
+
+    _get_student_user_context(db, payload.student_id)
+    if payload.status == "released":
+        db.execute(
+            text(
+                """
+                UPDATE financial_holds
+                SET student_id = :student_id,
+                    hold_type = :hold_type,
+                    reason = :reason,
+                    status = 'released',
+                    released_at = COALESCE(released_at, CURRENT_TIMESTAMP),
+                    released_by_admin_id = COALESCE(released_by_admin_id, :released_by_admin_id),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :hold_id
+                """
+            ),
+            {
+                "hold_id": hold_id,
+                "student_id": payload.student_id,
+                "hold_type": payload.hold_type,
+                "reason": payload.reason.strip(),
+                "released_by_admin_id": admin_profile_id,
+            },
+        )
+    else:
+        db.execute(
+            text(
+                """
+                UPDATE financial_holds
+                SET student_id = :student_id,
+                    hold_type = :hold_type,
+                    reason = :reason,
+                    status = 'active',
+                    released_at = NULL,
+                    released_by_admin_id = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :hold_id
+                """
+            ),
+            {
+                "hold_id": hold_id,
+                "student_id": payload.student_id,
+                "hold_type": payload.hold_type,
+                "reason": payload.reason.strip(),
+            },
+        )
+
+    _create_audit_log(
+        db,
+        actor_user_id,
+        "financial_hold",
+        hold_id,
+        "update",
+        "Updated manual financial hold record",
+    )
+    db.commit()
+
+    return {
+        "message": "Financial hold updated successfully.",
         "hold": _get_finance_hold_item(db, hold_id),
     }
 

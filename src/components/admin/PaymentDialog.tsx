@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
-import { apiPost } from "@/lib/api";
+import { apiPost, apiPut } from "@/lib/api";
 
 interface FinanceInvoiceOption {
   id: number;
@@ -26,11 +26,24 @@ interface FinanceInvoiceOption {
   status: string;
 }
 
+interface EditablePaymentRecord {
+  id: number;
+  student_id: number;
+  invoice_id: number | null;
+  reference_number: string | null;
+  payment_method: string;
+  amount: number;
+  paid_at: string;
+  status: string;
+  notes: string | null;
+}
+
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   referenceData: AdminReferenceData;
   invoices: FinanceInvoiceOption[];
+  payment?: EditablePaymentRecord | null;
 }
 
 interface PaymentFormState {
@@ -39,39 +52,56 @@ interface PaymentFormState {
   amount: string;
   payment_method: "cash" | "card" | "bank_transfer" | "online";
   paid_at: string;
+  status: "pending" | "confirmed" | "failed" | "refunded";
   reference_number: string;
   notes: string;
 }
 
-function getDefaultState(referenceData: AdminReferenceData): PaymentFormState {
+function getDefaultState(referenceData: AdminReferenceData, payment?: EditablePaymentRecord | null): PaymentFormState {
+  if (payment) {
+    return {
+      student_id: String(payment.student_id),
+      invoice_id: payment.invoice_id ? String(payment.invoice_id) : "none",
+      amount: String(Number(payment.amount ?? 0)),
+      payment_method: payment.payment_method as PaymentFormState["payment_method"],
+      paid_at: payment.paid_at.slice(0, 16),
+      status: payment.status as PaymentFormState["status"],
+      reference_number: payment.reference_number ?? "",
+      notes: payment.notes ?? "",
+    };
+  }
+
   return {
     student_id: referenceData.students?.[0] ? String(referenceData.students[0].student_id) : "",
     invoice_id: "none",
     amount: "",
     payment_method: "card",
     paid_at: new Date().toISOString().slice(0, 16),
+    status: "confirmed",
     reference_number: "",
     notes: "",
   };
 }
 
-export function PaymentDialog({ open, onOpenChange, referenceData, invoices }: PaymentDialogProps) {
+export function PaymentDialog({ open, onOpenChange, referenceData, invoices, payment }: PaymentDialogProps) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<PaymentFormState>(getDefaultState(referenceData));
+  const [form, setForm] = useState<PaymentFormState>(getDefaultState(referenceData, payment));
+  const isEditing = Boolean(payment);
 
   useEffect(() => {
     if (open) {
-      setForm(getDefaultState(referenceData));
+      setForm(getDefaultState(referenceData, payment));
     }
-  }, [open, referenceData]);
+  }, [open, referenceData, payment]);
 
   const filteredInvoices = useMemo(
     () =>
       invoices.filter(
         (invoice) =>
-          String(invoice.student_id) === form.student_id && invoice.status !== "paid" && invoice.status !== "void" && Number(invoice.balance_amount) > 0,
+          String(invoice.student_id) === form.student_id &&
+          (String(invoice.id) === form.invoice_id || (invoice.status !== "paid" && invoice.status !== "void" && Number(invoice.balance_amount) > 0)),
       ),
-    [form.student_id, invoices],
+    [form.invoice_id, form.student_id, invoices],
   );
 
   const mutation = useMutation({
@@ -80,7 +110,7 @@ export function PaymentDialog({ open, onOpenChange, referenceData, invoices }: P
         throw new Error("Student, amount, and payment date are required.");
       }
 
-      return apiPost("/finance/payments", {
+      const payload = {
         student_id: Number(form.student_id),
         invoice_id: form.invoice_id !== "none" ? Number(form.invoice_id) : null,
         amount: Number(form.amount),
@@ -88,20 +118,29 @@ export function PaymentDialog({ open, onOpenChange, referenceData, invoices }: P
         paid_at: form.paid_at,
         reference_number: form.reference_number.trim() || null,
         notes: form.notes.trim() || null,
-      });
+      };
+
+      if (payment) {
+        return apiPut(`/finance/payments/${payment.id}`, {
+          ...payload,
+          status: form.status,
+        });
+      }
+
+      return apiPost("/finance/payments", payload);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["finance", "overview"] });
       toast({
-        title: "Payment recorded",
-        description: "The transaction is now reflected in the finance overview.",
+        title: isEditing ? "Payment record updated" : "Payment record added",
+        description: "Finance records now reflect the staff-entered information.",
       });
       onOpenChange(false);
     },
     onError: (error) => {
       toast({
-        title: "Unable to record payment",
-        description: error instanceof Error ? error.message : "The payment could not be posted.",
+        title: isEditing ? "Unable to update payment record" : "Unable to add payment record",
+        description: error instanceof Error ? error.message : "The payment record could not be saved.",
       });
     },
   });
@@ -114,8 +153,12 @@ export function PaymentDialog({ open, onOpenChange, referenceData, invoices }: P
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Record Payment</DialogTitle>
-          <DialogDescription>Post a payment, optionally link it to an open invoice, and update the student balance immediately.</DialogDescription>
+          <DialogTitle>{isEditing ? "Edit Payment Record" : "Add Payment Record"}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Correct the staff-maintained payment details for this student."
+              : "Add a payment record from finance staff records; no online payment is processed here."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -136,13 +179,13 @@ export function PaymentDialog({ open, onOpenChange, referenceData, invoices }: P
           </div>
 
           <div className="space-y-2">
-            <Label>Apply to Invoice</Label>
+            <Label>Linked Invoice</Label>
             <Select value={form.invoice_id} onValueChange={(value) => setField("invoice_id", value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select invoice" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Unallocated payment</SelectItem>
+                <SelectItem value="none">Unlinked record</SelectItem>
                 {filteredInvoices.map((invoice) => (
                   <SelectItem key={invoice.id} value={String(invoice.id)}>
                     {invoice.invoice_number} ({Number(invoice.balance_amount).toFixed(2)})
@@ -167,10 +210,27 @@ export function PaymentDialog({ open, onOpenChange, referenceData, invoices }: P
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="online">External Online Record</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {isEditing ? (
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(value) => setField("status", value as PaymentFormState["status"])}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="payment-paid-at">Paid At</Label>
@@ -193,7 +253,7 @@ export function PaymentDialog({ open, onOpenChange, referenceData, invoices }: P
             Cancel
           </Button>
           <Button type="button" className="gradient-primary text-primary-foreground hover:opacity-90" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-            {mutation.isPending ? "Posting..." : "Record Payment"}
+            {mutation.isPending ? "Saving..." : isEditing ? "Save Record" : "Add Record"}
           </Button>
         </DialogFooter>
       </DialogContent>

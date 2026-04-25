@@ -195,12 +195,12 @@ It is intentionally written without team-role assignments. The purpose is to sho
 ## 15. Finance Module
 
 - define fee categories
-- create student invoices
-- create invoice items
-- record payments
-- allocate payments to invoices
-- calculate outstanding balances
-- apply and release financial holds
+- create and edit student invoice records
+- create and edit invoice items
+- record staff-entered payment information
+- optionally link recorded payments to invoices for balance tracking
+- calculate outstanding balances from staff-maintained records
+- apply, edit, and release financial holds
 - track financial aid or scholarship awards if in scope
 - expose invoice and payment history to students
 - expose finance controls to admins

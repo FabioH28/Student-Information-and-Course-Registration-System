@@ -122,7 +122,7 @@ The schema covers:
 - departments, programs, terms, courses, offerings, and enrollments
 - attendance and grades
 - recommendations and risk assessments
-- invoices, aid awards, payments, allocations, and financial holds
+- staff-maintained invoices, aid awards, payment records, optional invoice links, and financial holds
 - clubs, memberships, and join requests
 - announcements, events, and inbox notifications
 - AI assistant chat history and system settings

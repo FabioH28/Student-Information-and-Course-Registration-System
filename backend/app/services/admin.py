@@ -891,7 +891,14 @@ def get_admin_finance_overview(db: Session) -> dict:
               si.balance_amount,
               si.due_date,
               si.status,
-              si.notes
+              si.notes,
+              (
+                SELECT ii.description
+                FROM invoice_items ii
+                WHERE ii.invoice_id = si.id
+                ORDER BY ii.id ASC
+                LIMIT 1
+              ) AS description
             FROM student_invoices si
             JOIN student_profiles sp ON sp.id = si.student_id
             JOIN users u ON u.id = sp.user_id
@@ -938,6 +945,13 @@ def get_admin_finance_overview(db: Session) -> dict:
               p.paid_at,
               p.status,
               p.notes,
+              (
+                SELECT pa.invoice_id
+                FROM payment_allocations pa
+                WHERE pa.payment_id = p.id
+                ORDER BY pa.id ASC
+                LIMIT 1
+              ) AS invoice_id,
               (
                 SELECT si.invoice_number
                 FROM payment_allocations pa

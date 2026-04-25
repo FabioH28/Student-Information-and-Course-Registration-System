@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertTriangle, CircleDollarSign, Landmark, Receipt, Search, Wallet } from "lucide-react";
+import { AlertTriangle, CircleDollarSign, Landmark, Pencil, Receipt, Search, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -37,6 +37,7 @@ interface AdminFinanceResponse {
     balance_amount: number;
     due_date: string;
     status: string;
+    description: string | null;
     notes: string | null;
   }>;
   holds: Array<{
@@ -53,13 +54,14 @@ interface AdminFinanceResponse {
     id: number;
     student_id: number;
     student_name: string;
-    reference_number: string;
+    reference_number: string | null;
     payment_method: string;
     amount: number;
     currency: string;
     paid_at: string;
     status: string;
     notes: string | null;
+    invoice_id: number | null;
     invoice_number: string | null;
   }>;
 }
@@ -86,6 +88,9 @@ export default function AdminFinance() {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [holdOpen, setHoldOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<AdminFinanceResponse["invoices"][number] | null>(null);
+  const [editingPayment, setEditingPayment] = useState<AdminFinanceResponse["payments"][number] | null>(null);
+  const [editingHold, setEditingHold] = useState<AdminFinanceResponse["holds"][number] | null>(null);
 
   const financeQuery = useQuery({
     queryKey: ["finance", "overview"],
@@ -103,7 +108,7 @@ export default function AdminFinance() {
       await queryClient.invalidateQueries({ queryKey: ["finance", "overview"] });
       toast({
         title: "Hold released",
-        description: "The student account is updated immediately.",
+        description: "The finance record has been updated.",
       });
     },
     onError: (error) => {
@@ -121,6 +126,27 @@ export default function AdminFinance() {
       ),
     [financeQuery.data?.invoices, search],
   );
+
+  const closeInvoiceDialog = (open: boolean) => {
+    setInvoiceOpen(open);
+    if (!open) {
+      setEditingInvoice(null);
+    }
+  };
+
+  const closePaymentDialog = (open: boolean) => {
+    setPaymentOpen(open);
+    if (!open) {
+      setEditingPayment(null);
+    }
+  };
+
+  const closeHoldDialog = (open: boolean) => {
+    setHoldOpen(open);
+    if (!open) {
+      setEditingHold(null);
+    }
+  };
 
   if (financeQuery.isLoading || referenceDataQuery.isLoading) {
     return <LoadingState lines={5} />;
@@ -146,20 +172,41 @@ export default function AdminFinance() {
 
   const finance = financeQuery.data;
   if (!finance) {
-    return <EmptyState title="No finance data yet" description="Invoices, balances, and holds will appear here once finance records exist." />;
+    return <EmptyState title="No finance data yet" description="Manual invoice, payment, and hold records will appear here once finance staff adds them." />;
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Finance Operations" description="Monitor invoices, collections, balances, and account holds">
-        <Button variant="outline" size="sm" onClick={() => setPaymentOpen(true)}>
-          <CircleDollarSign className="mr-2 h-4 w-4" /> Record Payment
+      <PageHeader title="Finance Records" description="Manage staff-entered invoices, payment notes, balances, and account holds">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setEditingPayment(null);
+            setPaymentOpen(true);
+          }}
+        >
+          <CircleDollarSign className="mr-2 h-4 w-4" /> Add Payment
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setHoldOpen(true)}>
-          <AlertTriangle className="mr-2 h-4 w-4" /> Place Hold
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setEditingHold(null);
+            setHoldOpen(true);
+          }}
+        >
+          <AlertTriangle className="mr-2 h-4 w-4" /> Add Hold
         </Button>
-        <Button size="sm" className="gradient-primary text-primary-foreground hover:opacity-90" onClick={() => setInvoiceOpen(true)}>
-          <Receipt className="mr-2 h-4 w-4" /> Issue Invoice
+        <Button
+          size="sm"
+          className="gradient-primary text-primary-foreground hover:opacity-90"
+          onClick={() => {
+            setEditingInvoice(null);
+            setInvoiceOpen(true);
+          }}
+        >
+          <Receipt className="mr-2 h-4 w-4" /> Add Invoice
         </Button>
       </PageHeader>
 
@@ -167,25 +214,25 @@ export default function AdminFinance() {
         <StatCard
           title="Outstanding Balance"
           value={formatCurrencyValue(finance.summary.outstanding_balance)}
-          subtitle={`${finance.summary.open_invoices} open invoices`}
+          subtitle={`${finance.summary.open_invoices} open invoice records`}
           icon={Wallet}
           variant="warning"
         />
         <StatCard
-          title="Invoices Issued"
+          title="Invoice Records"
           value={finance.summary.total_invoices}
-          subtitle="All active invoice records"
+          subtitle="Non-void records on file"
           icon={Landmark}
           variant="primary"
         />
         <StatCard
-          title="Payments Posted"
+          title="Payments Recorded"
           value={formatCurrencyValue(finance.summary.confirmed_payments)}
-          subtitle={`${finance.payments.length} recent payments`}
+          subtitle={`${finance.payments.length} recent staff entries`}
           icon={CircleDollarSign}
           variant="success"
         />
-        <StatCard title="Active Holds" value={finance.summary.active_holds} subtitle="Students currently blocked" icon={AlertTriangle} variant="info" />
+        <StatCard title="Active Holds" value={finance.summary.active_holds} subtitle="Manual hold records" icon={AlertTriangle} variant="info" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -195,7 +242,7 @@ export default function AdminFinance() {
           className="rounded-xl border bg-card p-5 shadow-card xl:col-span-2"
         >
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="font-semibold text-foreground">Invoice Queue</h3>
+            <h3 className="font-semibold text-foreground">Invoice Records</h3>
             <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by student or invoice..." className="pl-9" />
@@ -203,7 +250,7 @@ export default function AdminFinance() {
           </div>
 
           {filteredInvoices.length === 0 ? (
-            <EmptyState title="No invoices found" description="Try a different search or issue the first invoice." />
+            <EmptyState title="No invoices found" description="Try a different search or add the first invoice record." />
           ) : (
             <div className="space-y-3">
               {filteredInvoices.map((invoice) => (
@@ -219,9 +266,19 @@ export default function AdminFinance() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <p className="text-sm font-semibold text-foreground">{formatCurrencyValue(invoice.balance_amount)}</p>
                       <StatusBadge variant={getFinanceVariant(invoice.status)}>{titleize(invoice.status)}</StatusBadge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingInvoice(invoice);
+                          setInvoiceOpen(true);
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" /> Edit
+                      </Button>
                     </div>
                   </div>
 
@@ -244,7 +301,7 @@ export default function AdminFinance() {
         >
           <h3 className="mb-4 font-semibold text-foreground">Account Holds</h3>
           {finance.holds.length === 0 ? (
-            <EmptyState title="No finance holds" description="Students with holds will appear here." />
+            <EmptyState title="No hold records" description="Student account holds will appear here once finance staff adds them." />
           ) : (
             <div className="space-y-3">
               {finance.holds.map((hold) => (
@@ -258,13 +315,25 @@ export default function AdminFinance() {
                       <StatusBadge variant={getFinanceVariant(hold.status)}>{titleize(hold.status)}</StatusBadge>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>{titleize(hold.hold_type)} - {formatDate(hold.placed_at)}</span>
-                      {hold.status === "active" ? (
-                        <Button variant="outline" size="sm" onClick={() => releaseHoldMutation.mutate(hold.id)} disabled={releaseHoldMutation.isPending}>
-                          Release
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingHold(hold);
+                            setHoldOpen(true);
+                          }}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" /> Edit
                         </Button>
-                      ) : null}
+                        {hold.status === "active" ? (
+                          <Button variant="outline" size="sm" onClick={() => releaseHoldMutation.mutate(hold.id)} disabled={releaseHoldMutation.isPending}>
+                            Release
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -280,9 +349,9 @@ export default function AdminFinance() {
         transition={{ delay: 0.12 }}
         className="rounded-xl border bg-card p-5 shadow-card"
       >
-        <h3 className="mb-4 font-semibold text-foreground">Recent Payments</h3>
+        <h3 className="mb-4 font-semibold text-foreground">Payment Records</h3>
         {finance.payments.length === 0 ? (
-          <EmptyState title="No payments yet" description="Posted payments will appear here once finance starts recording collections." />
+          <EmptyState title="No payment records yet" description="Staff-entered payment records will appear here." />
         ) : (
           <div className="space-y-3">
             {finance.payments.map((payment) => (
@@ -290,13 +359,23 @@ export default function AdminFinance() {
                 <div>
                   <p className="text-sm font-medium text-foreground">{payment.student_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {payment.reference_number} {payment.invoice_number ? `- ${payment.invoice_number}` : "- Unallocated"}
+                    {payment.reference_number ?? "No reference"} {payment.invoice_number ? `- ${payment.invoice_number}` : "- Unlinked"}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <p className="text-sm font-semibold text-foreground">{formatCurrencyValue(payment.amount, payment.currency)}</p>
                   <StatusBadge variant={getFinanceVariant(payment.status)}>{titleize(payment.status)}</StatusBadge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingPayment(payment);
+                      setPaymentOpen(true);
+                    }}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                  </Button>
                 </div>
               </div>
             ))}
@@ -304,9 +383,15 @@ export default function AdminFinance() {
         )}
       </motion.div>
 
-      <InvoiceDialog open={invoiceOpen} onOpenChange={setInvoiceOpen} referenceData={referenceDataQuery.data} />
-      <PaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} referenceData={referenceDataQuery.data} invoices={finance.invoices} />
-      <FinancialHoldDialog open={holdOpen} onOpenChange={setHoldOpen} referenceData={referenceDataQuery.data} />
+      <InvoiceDialog open={invoiceOpen} onOpenChange={closeInvoiceDialog} referenceData={referenceDataQuery.data} invoice={editingInvoice} />
+      <PaymentDialog
+        open={paymentOpen}
+        onOpenChange={closePaymentDialog}
+        referenceData={referenceDataQuery.data}
+        invoices={finance.invoices}
+        payment={editingPayment}
+      />
+      <FinancialHoldDialog open={holdOpen} onOpenChange={closeHoldDialog} referenceData={referenceDataQuery.data} hold={editingHold} />
     </div>
   );
 }

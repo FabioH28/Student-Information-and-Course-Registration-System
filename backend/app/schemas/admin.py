@@ -120,6 +120,18 @@ class InvoiceCreateRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=255)
 
 
+class InvoiceUpdateRequest(BaseModel):
+    student_id: int
+    academic_term_id: int | None = None
+    issue_date: date
+    due_date: date
+    amount: float = Field(gt=0)
+    balance_amount: float = Field(ge=0)
+    status: Literal["draft", "issued", "partially_paid", "paid", "overdue", "void"] = "issued"
+    description: str = Field(min_length=3, max_length=255)
+    notes: str | None = Field(default=None, max_length=255)
+
+
 class PaymentCreateRequest(BaseModel):
     student_id: int
     invoice_id: int | None = None
@@ -130,10 +142,28 @@ class PaymentCreateRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=255)
 
 
+class PaymentUpdateRequest(BaseModel):
+    student_id: int
+    invoice_id: int | None = None
+    amount: float = Field(gt=0)
+    payment_method: Literal["cash", "card", "bank_transfer", "online"]
+    paid_at: datetime
+    status: Literal["pending", "confirmed", "failed", "refunded"] = "confirmed"
+    reference_number: str | None = Field(default=None, max_length=60)
+    notes: str | None = Field(default=None, max_length=255)
+
+
 class FinancialHoldCreateRequest(BaseModel):
     student_id: int
     hold_type: Literal["finance", "disciplinary", "academic", "administrative"] = "finance"
     reason: str = Field(min_length=3, max_length=255)
+
+
+class FinancialHoldUpdateRequest(BaseModel):
+    student_id: int
+    hold_type: Literal["finance", "disciplinary", "academic", "administrative"] = "finance"
+    reason: str = Field(min_length=3, max_length=255)
+    status: Literal["active", "released"] = "active"
 
 
 class ClubUpsertRequest(BaseModel):

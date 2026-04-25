@@ -5,7 +5,7 @@ Production-style MySQL schema for the Campus Information System project, designe
 - `Student` users who can only view their own records
 - `Instructor` users who can manage grades and attendance for assigned offerings
 - `Academic Staff` users who manage scheduling, registrations, records, and academic operations
-- `Finance Staff` users who manage invoices, payments, holds, and finance records
+- `Finance Staff` users who manage manual invoices, payment records, holds, and finance records
 - `Communication Staff` users who manage announcements, events, clubs, and public communication
 - `System Admin` users who manage users, roles, settings, and system oversight
 
@@ -81,7 +81,7 @@ mysql -u root -p < backend/database/mysql/09_seed_demo_users.sql
 - departments, programs, terms, courses, prerequisites, and offerings
 - attendance, grade components, grade records, and final grades
 - recommendations, risk assessments, and term performance history
-- invoices, invoice items, payments, aid awards, allocations, and financial holds
+- staff-maintained invoices, invoice items, payment records, aid awards, optional invoice links, and financial holds
 - announcements, audience targeting, campus events, and event registrations
 - inbox notifications and recipient read-state tracking
 - club categories, clubs, memberships, join requests, and club-linked events
