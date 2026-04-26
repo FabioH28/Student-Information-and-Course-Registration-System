@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.routes import auth
+from src.routes import auth, students, courses, offerings, registrations, grades, attendance, finance, notifications
 
 app = FastAPI(
     title="Campus Information System API",
@@ -17,6 +17,14 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(students.router)
+app.include_router(courses.router)
+app.include_router(offerings.router)
+app.include_router(registrations.router)
+app.include_router(grades.router)
+app.include_router(attendance.router)
+app.include_router(finance.router)
+app.include_router(notifications.router)
 
 @app.get("/")
 def root():
