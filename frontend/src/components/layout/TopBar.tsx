@@ -1,16 +1,38 @@
-import { Bell, Search, ChevronDown, Menu } from "lucide-react";
-import { useState } from "react";
+import { Bell, Search, ChevronDown, Menu, LogOut, User } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TopBarProps {
   title: string;
   subtitle?: string;
-  userName?: string;
-  role?: string;
   onMenuToggle?: () => void;
 }
 
-export function TopBar({ title, subtitle, userName = "Alex Johnson", role = "Student", onMenuToggle }: TopBarProps) {
-  const [searchOpen, setSearchOpen] = useState(false);
+export function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const displayName = user?.display_name ?? "User";
+  const initials = displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+  const roleLabel = (user?.role ?? "").replace("_", " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+  function handleSignOut() {
+    signOut();
+    navigate("/");
+  }
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-sm sm:px-6">
@@ -23,9 +45,9 @@ export function TopBar({ title, subtitle, userName = "Alex Johnson", role = "Stu
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-        <div className="hidden sm:block">
-          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        <div>
+          <h1 className="text-lg font-semibold text-foreground leading-tight">{title}</h1>
+          {subtitle && <p className="hidden sm:block text-xs text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
 
@@ -46,17 +68,38 @@ export function TopBar({ title, subtitle, userName = "Alex Johnson", role = "Stu
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
         </button>
 
-        {/* Profile */}
-        <button className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-1 transition-colors hover:bg-muted sm:pl-3 sm:pr-2">
-          <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
-            {userName.split(" ").map(n => n[0]).join("")}
-          </div>
-          <div className="hidden sm:block text-left">
-            <p className="text-sm font-medium text-foreground leading-tight">{userName}</p>
-            <p className="text-xs text-muted-foreground leading-tight">{role}</p>
-          </div>
-          <ChevronDown className="hidden w-4 h-4 text-muted-foreground sm:block" />
-        </button>
+        {/* Profile dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-1 transition-colors hover:bg-muted sm:pl-3 sm:pr-2"
+          >
+            <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
+              {initials}
+            </div>
+            <div className="hidden sm:block text-left">
+              <p className="text-sm font-medium text-foreground leading-tight">{displayName}</p>
+              <p className="text-xs text-muted-foreground leading-tight">{roleLabel}</p>
+            </div>
+            <ChevronDown className="hidden w-4 h-4 text-muted-foreground sm:block" />
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute right-0 mt-1 w-48 rounded-lg border border-border bg-card shadow-lg z-50 overflow-hidden">
+              <div className="px-3 py-2 border-b border-border">
+                <p className="text-xs font-medium text-foreground truncate">{displayName}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

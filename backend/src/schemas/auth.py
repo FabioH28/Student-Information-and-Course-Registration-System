@@ -8,6 +8,8 @@ class LoginResponse(BaseModel):
     access_token: str
     role: str
     require_password_change: bool
+    email: str
+    display_name: str
 
 class ChangePasswordRequest(BaseModel):
     current_password: str

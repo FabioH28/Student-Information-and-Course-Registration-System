@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from src.config.database import get_db
 from src.models.user import User
+from src.models.student import Student
+from src.models.instructor import Instructor
 from src.schemas.auth import LoginRequest, LoginResponse, ChangePasswordRequest, ResetPasswordRequest, ConfirmResetRequest
 from src.utils.security import verify_password, hash_password, create_access_token, get_current_user
 from src.utils.audit import log_action
@@ -19,7 +21,24 @@ def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
     token = create_access_token({"sub": str(user.id), "role": user.role})
     log_action(db, user.id, "LOGIN", "users", user.id, "Successful login", request.client.host)
-    return LoginResponse(access_token=token, role=user.role, require_password_change=user.is_first_login)
+
+    display_name = user.email.split("@")[0]
+    if user.role == "student":
+        profile = db.query(Student).filter(Student.user_id == user.id).first()
+        if profile:
+            display_name = f"{profile.first_name} {profile.last_name}"
+    elif user.role == "instructor":
+        profile = db.query(Instructor).filter(Instructor.user_id == user.id).first()
+        if profile:
+            display_name = f"{profile.title} {profile.last_name}".strip() if profile.title else f"{profile.first_name} {profile.last_name}"
+
+    return LoginResponse(
+        access_token=token,
+        role=user.role,
+        require_password_change=user.is_first_login,
+        email=user.email,
+        display_name=display_name,
+    )
 
 @router.post("/change-password")
 def change_password(body: ChangePasswordRequest, request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
