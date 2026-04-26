@@ -25,3 +25,18 @@ dist-ssr
 
 # Visual Studio
 .vs/
+
+# Python
+backend/venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables — NEVER commit these
+.env
+.env.*
+!.env.example
+
+# Claude Code
+.claude/
