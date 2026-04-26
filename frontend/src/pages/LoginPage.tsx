@@ -5,23 +5,38 @@ import { GraduationCap, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
 
-const roles = [
-  { label: "Student", value: "/student" },
-  { label: "Instructor", value: "/instructor" },
-  { label: "Academic Staff", value: "/academic-staff" },
-  { label: "Finance Staff", value: "/finance-staff" },
-  { label: "System Admin", value: "/admin" },
-];
+const roleRoutes: Record<string, string> = {
+  student: "/student",
+  instructor: "/instructor",
+  academic_staff: "/academic-staff",
+  finance_staff: "/finance-staff",
+  system_admin: "/admin",
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("/student");
+  const { signIn } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate(selectedRole);
+    setError("");
+    setLoading(true);
+    try {
+      const data = await signIn(email, password);
+      navigate(roleRoutes[data.role] ?? "/");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,7 +57,6 @@ export default function LoginPage() {
             />
           ))}
         </div>
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -78,8 +92,16 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email or Student ID</Label>
-              <Input id="email" placeholder="your@university.edu" className="h-11" />
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@university.edu"
+                className="h-11"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
@@ -94,6 +116,9 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="********"
                   className="h-11 pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
                 <button
                   type="button"
@@ -104,27 +129,17 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role (dev only)</Label>
-              <select
-                id="role"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="h-11 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
-              >
-                {roles.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
             <Button
               type="submit"
+              disabled={loading}
               className="h-11 w-full gradient-primary font-medium text-primary-foreground transition-opacity hover:opacity-90"
             >
-              Sign In
+              {loading ? "Signing in…" : "Sign In"}
             </Button>
           </form>
-
         </motion.div>
       </div>
     </div>
