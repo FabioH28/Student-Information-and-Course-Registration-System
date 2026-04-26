@@ -12,6 +12,6 @@ class Notification(Base):
     message    = Column(String, nullable=False)
     type       = Column(String(50), nullable=False)
     is_read    = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="notifications")

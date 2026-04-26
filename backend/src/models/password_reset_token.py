@@ -10,4 +10,4 @@ class PasswordResetToken(Base):
     token      = Column(String(512), unique=True, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     used_at    = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)

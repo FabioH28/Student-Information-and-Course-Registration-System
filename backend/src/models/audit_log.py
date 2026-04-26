@@ -13,6 +13,6 @@ class AuditLog(Base):
     entity_id  = Column(Integer)
     details    = Column(String)
     ip_address = Column(String(50))
-    created_at = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="audit_logs")

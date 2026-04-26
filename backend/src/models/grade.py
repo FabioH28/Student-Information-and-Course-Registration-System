@@ -14,6 +14,6 @@ class Grade(Base):
     total_score      = Column(Numeric(5, 2))
     letter_grade     = Column(String(3))
     is_published     = Column(Boolean, nullable=False, default=False)
-    updated_at       = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    updated_at       = Column(DateTime, server_default=func.now(), nullable=False)
 
     registration = relationship("Registration", back_populates="grade")

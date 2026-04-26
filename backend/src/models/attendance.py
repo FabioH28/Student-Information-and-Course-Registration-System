@@ -10,7 +10,7 @@ class AttendanceSession(Base):
     offering_id  = Column(Integer, ForeignKey("offerings.id"), nullable=False)
     session_date = Column(Date, nullable=False)
     topic        = Column(String(255))
-    created_at   = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    created_at   = Column(DateTime, server_default=func.now(), nullable=False)
 
     offering = relationship("Offering", back_populates="sessions")
     records  = relationship("AttendanceRecord", back_populates="session", cascade="all, delete-orphan")

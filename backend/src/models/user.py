@@ -12,7 +12,7 @@ class User(Base):
     role           = Column(String(50), nullable=False)
     is_first_login = Column(Boolean, default=True, nullable=False)
     is_active      = Column(Boolean, default=True, nullable=False)
-    created_at     = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    created_at     = Column(DateTime, server_default=func.now(), nullable=False)
 
     student       = relationship("Student", back_populates="user", uselist=False)
     instructor    = relationship("Instructor", back_populates="user", uselist=False)

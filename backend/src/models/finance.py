@@ -14,7 +14,7 @@ class Invoice(Base):
     amount_paid = Column(Numeric(10, 2), nullable=False, default=0)
     due_date    = Column(Date, nullable=False)
     status      = Column(String(30), nullable=False, default="pending")
-    issued_at   = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    issued_at   = Column(DateTime, server_default=func.now(), nullable=False)
 
     student  = relationship("Student", back_populates="invoices")
     semester = relationship("Semester", back_populates="invoices")
@@ -30,7 +30,7 @@ class Payment(Base):
     amount      = Column(Numeric(10, 2), nullable=False)
     method      = Column(String(50), nullable=False)
     reference   = Column(String(100))
-    paid_at     = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    paid_at     = Column(DateTime, server_default=func.now(), nullable=False)
 
     invoice          = relationship("Invoice", back_populates="payments")
     recorded_by_user = relationship("User")
@@ -45,7 +45,7 @@ class Hold(Base):
     effect      = Column(String(255), nullable=False)
     is_active   = Column(Boolean, nullable=False, default=True)
     created_by  = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at  = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    created_at  = Column(DateTime, server_default=func.now(), nullable=False)
     resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     resolved_at = Column(DateTime, nullable=True)
 

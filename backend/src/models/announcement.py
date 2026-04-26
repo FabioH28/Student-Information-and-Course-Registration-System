@@ -11,6 +11,6 @@ class Announcement(Base):
     title        = Column(String(255), nullable=False)
     content      = Column(String, nullable=False)
     target_role  = Column(String(50))
-    published_at = Column(DateTime, server_default=func.getutcdate(), nullable=False)
+    published_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     author = relationship("User")
