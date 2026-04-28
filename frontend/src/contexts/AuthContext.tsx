@@ -4,6 +4,8 @@ import { login as apiLogin, LoginResponse } from "@/lib/api";
 interface AuthUser {
   role: string;
   require_password_change: boolean;
+  email: string;
+  display_name: string;
 }
 
 interface AuthContextValue {
@@ -11,6 +13,7 @@ interface AuthContextValue {
   token: string | null;
   signIn: (email: string, password: string) => Promise<LoginResponse>;
   signOut: () => void;
+  clearPasswordChange: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -24,10 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const data = await apiLogin(email, password);
+    const authUser: AuthUser = {
+      role: data.role,
+      require_password_change: data.require_password_change,
+      email: data.email,
+      display_name: data.display_name,
+    };
     localStorage.setItem("token", data.access_token);
-    localStorage.setItem("user", JSON.stringify({ role: data.role, require_password_change: data.require_password_change }));
+    localStorage.setItem("user", JSON.stringify(authUser));
     setToken(data.access_token);
-    setUser({ role: data.role, require_password_change: data.require_password_change });
+    setUser(authUser);
     return data;
   }, []);
 
@@ -38,8 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const clearPasswordChange = useCallback(() => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, require_password_change: false };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, token, signIn, signOut, clearPasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

@@ -36,8 +36,6 @@ export default function AcademicStaffLayout() {
         <TopBar
           title={page.title}
           subtitle={page.subtitle}
-          userName="Academic Staff"
-          role="Academic Staff"
           onMenuToggle={isMobile ? () => setMobileOpen(true) : undefined}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

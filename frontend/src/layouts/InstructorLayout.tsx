@@ -36,8 +36,6 @@ export default function InstructorLayout() {
         <TopBar
           title={page.title}
           subtitle={page.subtitle}
-          userName="Dr. Smith"
-          role="Instructor"
           onMenuToggle={isMobile ? () => setMobileOpen(true) : undefined}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

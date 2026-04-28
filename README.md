@@ -1,10 +1,6 @@
 # Student Information and Course Registration System (CIS)
 
-A web-based Campus Information System for managing academic operations, student services, and institutional administration in a university environment.
-
-## Status
-
-> Frontend prototype in progress. Backend and database not yet implemented.
+A full-stack web application for managing academic operations, student services, and institutional administration in a university environment.
 
 ## Tech Stack
 
@@ -16,71 +12,99 @@ A web-based Campus Information System for managing academic operations, student 
 | Data Fetching | TanStack Query |
 | Forms | React Hook Form + Zod |
 | Charts | Recharts |
-| Backend (planned) | FastAPI (Python) |
-| Database (planned) | Relational SQL |
+| Backend | FastAPI (Python) |
+| Database | MySQL 8 |
+| Auth | JWT + bcrypt |
 
 ## User Roles & Permissions
 
-## User Roles & Permissions
-
-| Feature | Student | Instructor | Academic Staff | Finance Staff | Communication Staff | System Admin |
-|---|---|---|---|---|---|---|
-| View own profile | Yes | Yes | Yes | Yes | Yes | Yes |
-| Edit own profile | Yes | Yes | Yes | Yes | Yes | Yes |
-| View own timetable | Yes | Yes | Yes | No | No | Yes |
-| View grades | Yes (own only) | Yes (own course students) | Yes | No | No | Yes |
-| Edit grades | No | Yes | Yes | No | No | No |
-| Mark attendance | No | Yes | Yes | No | No | No |
-| View attendance records | Yes (own only) | Yes (own course students) | Yes | No | No | Yes |
-| Course registration | Yes | No | Yes | No | No | No |
-| View enrolled courses | Yes (own only) | Yes (own courses) | Yes | No | No | Yes |
-| Manage course catalog | No | No | Yes | No | No | Yes |
-| Manage semester offerings | No | No | Yes | No | No | Yes |
-| Manage timetable/scheduling | No | No | Yes | No | No | Yes |
-| Manage exam schedules | No | No | Yes | No | No | Yes |
-| View academic records | Yes (own only) | Yes (own course students) | Yes | No | No | Yes |
-| Manage student academic records | No | No | Yes | No | No | Yes |
-| View payment status | Yes (own only) | No | No | Yes | No | Yes |
-| Record/verify payments | No | No | No | Yes | No | Yes |
-| Manage invoices/fees | No | No | No | Yes | No | Yes |
-| Create announcements/news | No | Yes | Yes | No | Yes | Yes |
-| Manage announcements/news | No | Yes | Yes | No | Yes | Yes |
-| Create/manage events | No | No | Yes | No | Yes | Yes |
-| Send notifications | No | Yes | Yes | Yes | Yes | Yes |
-| Upload public media/files for announcements | No | No | Yes | No | Yes | Yes |
-| View reports/dashboard | Yes (own only) | Yes (own courses) | Yes | Yes | Yes | Yes |
-| Manage users/roles | No | No | No | No | No | Yes |
-| Manage system settings | No | No | No | No | No | Yes |
-| Full system access | No | No | No | No | No | Yes |
-
-
-
-
-## Role Definitions
-
-- **Student:** Accesses personal academic and financial information, registers for courses, and views timetable, grades, and attendance.
-- **Instructor:** Manages teaching-related activities for assigned courses, including grading, attendance, and course-related communication.
-- **Academic Staff:** Handles academic administration such as registration, scheduling, course catalog management, and student academic records.
-- **Finance Staff:** Manages tuition, fees, payment verification, and financial records.
-- **Communication Staff:** Manages announcements, news, events, and public communication content.
-- **System Admin:** Has full control over users, roles, permissions, and system settings.
-
-
+| Feature | Student | Instructor | Academic Staff | Finance Staff | System Admin |
+|---|---|---|---|---|---|
+| View own profile | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Edit own profile | ✅ | ✅ | ✅ | ✅ | ✅ |
+| View grades | Own only | Own courses | All | ❌ | ✅ |
+| Edit / publish grades | ❌ | ✅ | ✅ | ❌ | ✅ |
+| Mark attendance | ❌ | ✅ | ✅ | ❌ | ✅ |
+| Course registration | ✅ | ❌ | ✅ | ❌ | ✅ |
+| Manage course catalog | ❌ | ❌ | ✅ | ❌ | ✅ |
+| View payment status | Own only | ❌ | ❌ | ✅ | ✅ |
+| Record payments | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Manage invoices & holds | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Create announcements | ❌ | ✅ | ✅ | ❌ | ✅ |
+| Manage users | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Full system access | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ## Repository Structure
 
 ```
-├── docs/                  # Requirements, diagrams, meeting notes, API docs
-├── prototypes/            # Wireframes and UI mockups
-├── database/              # Schema, seed data, migrations
-├── backend/               # FastAPI backend (planned)
-├── frontend/              # React frontend (active)
-└── reports/               # Project reports and presentations
+├── backend/               # FastAPI backend
+│   ├── src/
+│   │   ├── config/        # Database & settings
+│   │   ├── models/        # SQLAlchemy ORM models
+│   │   ├── routes/        # API endpoints
+│   │   ├── schemas/       # Pydantic request/response schemas
+│   │   └── utils/         # Auth, security, audit helpers
+│   ├── .env.example       # Environment variable template
+│   └── requirements.txt   # Python dependencies
+├── database/
+│   ├── schema.sql         # MySQL table definitions
+│   └── seed.sql           # Sample data for development
+├── frontend/              # React + TypeScript frontend
+│   └── src/
+│       ├── contexts/      # Auth context
+│       ├── layouts/       # Role-based layouts
+│       ├── lib/           # API client
+│       └── pages/         # All role dashboards and pages
+└── docs/                  # Diagrams, meeting notes, reports
 ```
 
 ## Getting Started
 
-### Frontend
+### Prerequisites
+
+- Node.js 18+
+- Python 3.11+
+- MySQL 8.0+
+
+### 1. Database Setup
+
+Create the database and run the schema:
+
+```bash
+mysql -u root -p < database/schema.sql
+mysql -u root -p CampusIS < database/seed.sql
+```
+
+Or open `database/schema.sql` and `database/seed.sql` in MySQL Workbench and execute them in order.
+
+### 2. Backend Setup
+
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate it
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # Mac/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+copy .env.example .env       # Windows
+cp .env.example .env         # Mac/Linux
+# Then edit .env with your MySQL credentials
+
+# Start the server
+uvicorn src.main:app --reload --port 8000
+```
+
+API runs at `http://localhost:8000`
+Interactive docs at `http://localhost:8000/docs`
+
+### 3. Frontend Setup
 
 ```bash
 cd frontend
@@ -90,9 +114,34 @@ npm run dev
 
 App runs at `http://localhost:8080`
 
-### Backend
+### 4. Login Credentials (development)
 
-> Not yet implemented.
+All accounts use password: **`Password123!`**
+
+| Role | Email |
+|---|---|
+| Student | `alex.johnson@university.edu` |
+| Instructor | `dr.smith@university.edu` |
+| Academic Staff | `academic.staff@university.edu` |
+| Finance Staff | `finance.staff@university.edu` |
+| System Admin | `admin@university.edu` |
+
+## API Overview
+
+The backend exposes 50 REST endpoints across these areas:
+
+| Area | Prefix |
+|---|---|
+| Authentication | `/auth` |
+| Students | `/students` |
+| Courses | `/courses` |
+| Offerings | `/offerings` |
+| Registrations | `/registrations` |
+| Grades | `/grades` |
+| Attendance | `/attendance` |
+| Finance | `/finance` |
+| Notifications | `/notifications` |
+| Announcements | `/announcements` |
 
 ## Team
 

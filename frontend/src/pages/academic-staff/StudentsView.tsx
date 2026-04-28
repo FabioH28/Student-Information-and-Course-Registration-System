@@ -1,25 +1,30 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, MoreHorizontal } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/ui/page-header";
-
-const students = [
-  { id: "STU-2024-0847", name: "Alex Johnson", dept: "Computer Science", semester: 6, gpa: 3.72, credits: 78, status: "Active", risk: "Low" },
-  { id: "STU-2024-0912", name: "Sarah Kim", dept: "Computer Science", semester: 4, gpa: 3.45, credits: 54, status: "Active", risk: "Low" },
-  { id: "STU-2023-0234", name: "James Williams", dept: "Mathematics", semester: 5, gpa: 2.85, credits: 62, status: "Active", risk: "Medium" },
-  { id: "STU-2024-1001", name: "Maria Garcia", dept: "Information Systems", semester: 3, gpa: 3.90, credits: 42, status: "Active", risk: "Low" },
-  { id: "STU-2023-0567", name: "David Brown", dept: "Computer Science", semester: 7, gpa: 2.10, credits: 88, status: "Probation", risk: "High" },
-  { id: "STU-2024-0789", name: "Emma Davis", dept: "Data Science", semester: 2, gpa: 3.55, credits: 30, status: "Active", risk: "Low" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { studentsApi } from "@/lib/api";
 
 export default function StudentsView() {
   const [search, setSearch] = useState("");
-  const filtered = students.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase())
-  );
+
+  const { data: students = [], isLoading } = useQuery({
+    queryKey: ["students"],
+    queryFn: studentsApi.list,
+  });
+
+  const filtered = students.filter(s => {
+    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+    const q = search.toLowerCase();
+    return !q || name.includes(q) || s.student_code.toLowerCase().includes(q);
+  });
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">Loading students…</p></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -38,7 +43,7 @@ export default function StudentsView() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Student", "Department", "Sem", "GPA", "Credits", "Status", "Risk", ""].map(h => (
+                {["Student", "Code", "Sem", "GPA", "Status"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">{h}</th>
                 ))}
               </tr>
@@ -48,24 +53,24 @@ export default function StudentsView() {
                 <motion.tr key={s.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
                   className="hover:bg-muted/50 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="text-sm font-medium text-foreground">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{s.id}</p>
+                    <p className="text-sm font-medium text-foreground">{s.first_name} {s.last_name}</p>
+                    <p className="text-xs text-muted-foreground">{s.phone ?? "—"}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{s.dept}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{s.semester}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-foreground">{s.gpa}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{s.credits}</td>
+                  <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{s.student_code}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{s.current_semester}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-foreground">{Number(s.gpa).toFixed(2)}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge variant={s.status === "Active" ? "success" : "danger"}>{s.status}</StatusBadge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge variant={s.risk === "Low" ? "success" : s.risk === "Medium" ? "warning" : "danger"}>{s.risk}</StatusBadge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Button variant="ghost" size="sm"><MoreHorizontal className="w-4 h-4" /></Button>
+                    <StatusBadge variant={s.status === "active" ? "success" : s.status === "probation" ? "warning" : "danger"}>
+                      {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                    </StatusBadge>
                   </td>
                 </motion.tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No students found.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

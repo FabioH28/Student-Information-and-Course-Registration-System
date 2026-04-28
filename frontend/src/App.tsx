@@ -1,11 +1,16 @@
+import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { RequireAuth } from "./components/RequireAuth";
+import { ChangePasswordModal } from "./components/ChangePasswordModal";
 
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -51,65 +56,89 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function PasswordGate({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return (
+    <>
+      {children}
+      {user?.require_password_change && <ChangePasswordModal />}
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <PasswordGate>
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-          <Route path="/student" element={<StudentLayout />}>
-            <Route index element={<StudentDashboard />} />
-            <Route path="profile" element={<StudentProfile />} />
-            <Route path="courses" element={<CourseCatalog />} />
-            <Route path="registration" element={<CourseRegistration />} />
-            <Route path="timetable" element={<Timetable />} />
-            <Route path="grades" element={<GradesPage />} />
-            <Route path="recommendations" element={<Recommendations />} />
-            <Route path="risk" element={<RiskWarning />} />
-            <Route path="chatbot" element={<Chatbot />} />
-          </Route>
+            <Route element={<RequireAuth allowedRole="student" />}>
+              <Route path="/student" element={<StudentLayout />}>
+                <Route index element={<StudentDashboard />} />
+                <Route path="profile" element={<StudentProfile />} />
+                <Route path="courses" element={<CourseCatalog />} />
+                <Route path="registration" element={<CourseRegistration />} />
+                <Route path="timetable" element={<Timetable />} />
+                <Route path="grades" element={<GradesPage />} />
+                <Route path="recommendations" element={<Recommendations />} />
+                <Route path="risk" element={<RiskWarning />} />
+                <Route path="chatbot" element={<Chatbot />} />
+              </Route>
+            </Route>
 
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="students" element={<StudentManagement />} />
-            <Route path="courses" element={<CourseManagement />} />
-            <Route path="semesters" element={<SemesterManagement />} />
-            <Route path="registrations" element={<RegistrationOverview />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
+            <Route element={<RequireAuth allowedRole="system_admin" />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="students" element={<StudentManagement />} />
+                <Route path="courses" element={<CourseManagement />} />
+                <Route path="semesters" element={<SemesterManagement />} />
+                <Route path="registrations" element={<RegistrationOverview />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
+            </Route>
 
-          <Route path="/instructor" element={<InstructorLayout />}>
-            <Route index element={<InstructorDashboard />} />
-            <Route path="courses" element={<MyCourses />} />
-            <Route path="attendance" element={<AttendancePage />} />
-            <Route path="grades" element={<GradesManagement />} />
-            <Route path="roster" element={<Roster />} />
-          </Route>
+            <Route element={<RequireAuth allowedRole="instructor" />}>
+              <Route path="/instructor" element={<InstructorLayout />}>
+                <Route index element={<InstructorDashboard />} />
+                <Route path="courses" element={<MyCourses />} />
+                <Route path="attendance" element={<AttendancePage />} />
+                <Route path="grades" element={<GradesManagement />} />
+                <Route path="roster" element={<Roster />} />
+              </Route>
+            </Route>
 
-          <Route path="/academic-staff" element={<AcademicStaffLayout />}>
-            <Route index element={<AcademicDashboard />} />
-            <Route path="courses" element={<CourseCatalogManagement />} />
-            <Route path="registrations" element={<RegistrationsManagement />} />
-            <Route path="grades" element={<GradesView />} />
-            <Route path="students" element={<StudentsView />} />
-          </Route>
+            <Route element={<RequireAuth allowedRole="academic_staff" />}>
+              <Route path="/academic-staff" element={<AcademicStaffLayout />}>
+                <Route index element={<AcademicDashboard />} />
+                <Route path="courses" element={<CourseCatalogManagement />} />
+                <Route path="registrations" element={<RegistrationsManagement />} />
+                <Route path="grades" element={<GradesView />} />
+                <Route path="students" element={<StudentsView />} />
+              </Route>
+            </Route>
 
-          <Route path="/finance-staff" element={<FinanceStaffLayout />}>
-            <Route index element={<FinanceDashboard />} />
-            <Route path="payments" element={<PaymentsPage />} />
-            <Route path="invoices" element={<InvoicesPage />} />
-            <Route path="holds" element={<HoldsPage />} />
-          </Route>
+            <Route element={<RequireAuth allowedRole="finance_staff" />}>
+              <Route path="/finance-staff" element={<FinanceStaffLayout />}>
+                <Route index element={<FinanceDashboard />} />
+                <Route path="payments" element={<PaymentsPage />} />
+                <Route path="invoices" element={<InvoicesPage />} />
+                <Route path="holds" element={<HoldsPage />} />
+              </Route>
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          </PasswordGate>
+        </BrowserRouter>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

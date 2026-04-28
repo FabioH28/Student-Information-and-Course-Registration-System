@@ -38,8 +38,6 @@ export default function AdminLayout() {
         <TopBar
           title={page.title}
           subtitle={page.subtitle}
-          userName="Dr. Sarah Chen"
-          role="Admin"
           onMenuToggle={isMobile ? () => setMobileOpen(true) : undefined}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

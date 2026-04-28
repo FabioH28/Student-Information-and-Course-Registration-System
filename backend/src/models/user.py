@@ -8,8 +8,10 @@ class User(Base):
 
     id             = Column(Integer, primary_key=True, index=True)
     email          = Column(String(255), unique=True, nullable=False, index=True)
+    full_name      = Column(String(255), nullable=True)
     password_hash  = Column(String(512), nullable=False)
     role           = Column(String(50), nullable=False)
+    status         = Column(String(30), nullable=False, default="active")
     is_first_login = Column(Boolean, default=True, nullable=False)
     is_active      = Column(Boolean, default=True, nullable=False)
     created_at     = Column(DateTime, server_default=func.now(), nullable=False)

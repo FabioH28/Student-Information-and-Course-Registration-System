@@ -1,93 +1,120 @@
 import { motion } from "framer-motion";
-import { Users, BookOpen, CalendarDays, TrendingUp, AlertTriangle, Activity, ArrowUpRight, Clock } from "lucide-react";
+import { Users, BookOpen, CalendarDays, TrendingUp, AlertTriangle, Activity } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-
-const recentActivity = [
-  { action: "New registration", detail: "Sarah Kim registered for CS301", time: "2 min ago" },
-  { action: "Course added", detail: "CS305 Compiler Design added to catalog", time: "1 hour ago" },
-  { action: "Risk alert", detail: "3 students flagged with medium risk", time: "3 hours ago" },
-  { action: "Semester update", detail: "Registration deadline extended to Mar 15", time: "5 hours ago" },
-];
-
-const popularCourses = [
-  { name: "Machine Learning Intro", code: "CS301", enrolled: 48, capacity: 50 },
-  { name: "Software Engineering", code: "CS302", enrolled: 42, capacity: 45 },
-  { name: "Data Structures", code: "CS201", enrolled: 55, capacity: 60 },
-  { name: "AI Foundations", code: "CS250", enrolled: 38, capacity: 40 },
-];
+import { useQuery } from "@tanstack/react-query";
+import { studentsApi, coursesApi, registrationsApi, offeringsApi } from "@/lib/api";
 
 export default function AdminDashboard() {
+  const { data: students = [] } = useQuery({
+    queryKey: ["students"],
+    queryFn: studentsApi.list,
+  });
+
+  const { data: courses = [] } = useQuery({
+    queryKey: ["courses"],
+    queryFn: coursesApi.list,
+  });
+
+  const { data: registrations = [] } = useQuery({
+    queryKey: ["registrations-all"],
+    queryFn: () => registrationsApi.list(),
+  });
+
+  const { data: offerings = [] } = useQuery({
+    queryKey: ["offerings", 2],
+    queryFn: () => offeringsApi.list({ semester_id: 2 }),
+  });
+
+  const activeRegs = registrations.filter(r => r.status === "active");
+  const atRiskStudents = students.filter(s => s.status === "probation" || Number(s.gpa) < 2.5);
+  const activeOfferings = offerings.filter(o => o.status === "active");
+
+  const mostPopular = [...offerings]
+    .sort((a, b) => b.enrolled - a.enrolled)
+    .slice(0, 4);
+
+  const courseMap = Object.fromEntries(courses.map(c => [c.id, c]));
+
+  const riskLow = students.filter(s => Number(s.gpa) >= 3.0 && s.status === "active").length;
+  const riskMed = students.filter(s => Number(s.gpa) >= 2.5 && Number(s.gpa) < 3.0).length;
+  const riskHigh = students.filter(s => Number(s.gpa) < 2.5 || s.status === "probation").length;
+
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h2 className="text-2xl font-bold text-foreground">Admin Dashboard</h2>
-        <p className="text-sm text-muted-foreground mt-1">Spring 2026 — System overview and management</p>
+        <p className="text-sm text-muted-foreground mt-1">Spring 2025 — System overview</p>
       </motion.div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Students" value="1,247" icon={Users} variant="primary" trend={{ value: "+23 this week", positive: true }} delay={0.05} />
-        <StatCard title="Active Courses" value="86" icon={BookOpen} variant="info" delay={0.1} />
-        <StatCard title="Registrations" value="3,482" icon={CalendarDays} variant="success" trend={{ value: "+156 today", positive: true }} delay={0.15} />
-        <StatCard title="At-Risk Students" value="24" subtitle="1.9% of total" icon={AlertTriangle} variant="warning" delay={0.2} />
+        <StatCard title="Total Students" value={students.length} icon={Users} variant="primary" delay={0.05} />
+        <StatCard title="Courses" value={courses.length} icon={BookOpen} variant="info" delay={0.1} />
+        <StatCard title="Active Registrations" value={activeRegs.length} icon={CalendarDays} variant="success" delay={0.15} />
+        <StatCard title="At-Risk Students" value={atRiskStudents.length} subtitle="GPA < 2.5 or probation" icon={AlertTriangle} variant="warning" delay={0.2} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Popular Courses */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
           className="bg-card rounded-xl border p-5 shadow-card">
           <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" /> Most Popular Courses
+            <TrendingUp className="w-4 h-4 text-primary" /> Most Enrolled Offerings
           </h3>
-          <div className="space-y-3">
-            {popularCourses.map((c, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.code}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full gradient-primary" style={{ width: `${(c.enrolled / c.capacity) * 100}%` }} />
+          {mostPopular.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No offerings found.</p>
+          ) : (
+            <div className="space-y-3">
+              {mostPopular.map(o => {
+                const course = courseMap[o.course_id];
+                const pct = Math.round((o.enrolled / o.capacity) * 100);
+                return (
+                  <div key={o.id} className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0 mr-4">
+                      <p className="text-sm font-medium text-foreground truncate">{course?.name ?? `Offering #${o.id}`}</p>
+                      <p className="text-xs text-muted-foreground">{course?.code ?? ""} • {o.schedule ?? "—"}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full gradient-primary" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-14 text-right">{o.enrolled}/{o.capacity}</span>
+                    </div>
                   </div>
-                  <span className="text-xs text-muted-foreground w-14 text-right">{c.enrolled}/{c.capacity}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
 
-        {/* Recent Activity */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
           className="bg-card rounded-xl border p-5 shadow-card">
           <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-primary" /> Recent Activity
+            <Activity className="w-4 h-4 text-primary" /> System Summary
           </h3>
           <div className="space-y-3">
-            {recentActivity.map((a, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{a.action}</p>
-                  <p className="text-xs text-muted-foreground">{a.detail}</p>
-                </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1"><Clock className="w-3 h-3" />{a.time}</span>
+            {[
+              { label: "Active Offerings (Spring 2025)", value: activeOfferings.length },
+              { label: "Total Registrations", value: registrations.length },
+              { label: "Dropped Registrations", value: registrations.filter(r => r.status === "dropped").length },
+              { label: "Completed Registrations", value: registrations.filter(r => r.status === "completed").length },
+            ].map(item => (
+              <div key={item.label} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <p className="text-sm text-foreground">{item.label}</p>
+                <span className="text-sm font-semibold text-foreground">{item.value}</span>
               </div>
             ))}
           </div>
         </motion.div>
       </div>
 
-      {/* Risk Distribution */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
         className="bg-card rounded-xl border p-5 shadow-card">
         <h3 className="font-semibold text-foreground mb-4">Student Risk Distribution</h3>
         <div className="grid grid-cols-3 gap-4">
           {[
-            { level: "Low Risk", count: 1156, pct: "92.7%", variant: "success" as const },
-            { level: "Medium Risk", count: 67, pct: "5.4%", variant: "warning" as const },
-            { level: "High Risk", count: 24, pct: "1.9%", variant: "danger" as const },
+            { level: "Low Risk", count: riskLow, pct: students.length ? `${Math.round((riskLow / students.length) * 100)}%` : "—", variant: "success" as const },
+            { level: "Medium Risk", count: riskMed, pct: students.length ? `${Math.round((riskMed / students.length) * 100)}%` : "—", variant: "warning" as const },
+            { level: "High Risk", count: riskHigh, pct: students.length ? `${Math.round((riskHigh / students.length) * 100)}%` : "—", variant: "danger" as const },
           ].map(r => (
             <div key={r.level} className="text-center p-4 rounded-lg bg-muted/50">
               <StatusBadge variant={r.variant}>{r.level}</StatusBadge>
