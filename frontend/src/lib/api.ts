@@ -44,6 +44,26 @@ export function login(email: string, password: string) {
   return api.post<LoginResponse>("/auth/login", { email, password }, false);
 }
 
+export function changePassword(current_password: string, new_password: string) {
+  return api.post<{ message: string }>("/auth/change-password", { current_password, new_password });
+}
+
+export function register(full_name: string, email: string, password: string) {
+  return api.post<{ message: string }>("/auth/register", { full_name, email, password }, false);
+}
+
+export function verifyEmail(email: string, code: string) {
+  return api.post<{ message: string }>("/auth/verify-email", { email, code }, false);
+}
+
+export function requestPasswordReset(email: string) {
+  return api.post<{ message: string }>("/auth/request-reset", { email }, false);
+}
+
+export function confirmPasswordReset(token: string, new_password: string) {
+  return api.post<{ message: string }>("/auth/reset-password", { token, new_password }, false);
+}
+
 // ── Students ──────────────────────────────────────────────────────────────────
 export interface StudentOut {
   id: number;
@@ -268,4 +288,50 @@ export const notificationsApi = {
   announcements: () => api.get<AnnouncementOut[]>("/announcements"),
   createAnnouncement: (data: { title: string; content: string; target_role?: string }) =>
     api.post<AnnouncementOut>("/announcements", data),
+};
+
+// ── Users (admin) ─────────────────────────────────────────────────────────────
+export interface UserOut {
+  id: number;
+  email: string;
+  role: string;
+  is_active: boolean;
+  is_first_login: boolean;
+  display_name: string;
+  created_at: string;
+}
+
+// ── Semesters ─────────────────────────────────────────────────────────────────
+export interface SemesterOut {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  registration_deadline: string;
+  drop_deadline: string;
+}
+
+export const semestersApi = {
+  list: () => api.get<SemesterOut[]>("/semesters"),
+  create: (data: Omit<SemesterOut, "id" | "is_active">) =>
+    api.post<SemesterOut>("/semesters", data),
+  update: (id: number, data: Partial<SemesterOut>) =>
+    api.patch<SemesterOut>(`/semesters/${id}`, data),
+};
+
+// ── Users (admin) ─────────────────────────────────────────────────────────────
+export const usersApi = {
+  list: () => api.get<UserOut[]>("/users"),
+  pending: () => api.get<UserOut[]>("/users/pending"),
+  create: (data: { email: string; password: string; role: string }) =>
+    api.post<UserOut>("/users", data),
+  approve: (id: number, role: string) =>
+    api.post<UserOut>(`/users/${id}/approve`, { role }),
+  refuse: (id: number, reason?: string) =>
+    api.post<{ message: string }>(`/users/${id}/refuse`, { reason }),
+  update: (id: number, data: { role?: string; is_active?: boolean }) =>
+    api.patch<UserOut>(`/users/${id}`, data),
+  resetPassword: (id: number) =>
+    api.post<{ message: string }>(`/users/${id}/reset-password`, {}),
 };

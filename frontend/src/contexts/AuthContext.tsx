@@ -13,6 +13,7 @@ interface AuthContextValue {
   token: string | null;
   signIn: (email: string, password: string) => Promise<LoginResponse>;
   signOut: () => void;
+  clearPasswordChange: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -46,8 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const clearPasswordChange = useCallback(() => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, require_password_change: false };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, token, signIn, signOut, clearPasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

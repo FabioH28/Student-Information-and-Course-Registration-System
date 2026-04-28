@@ -13,6 +13,12 @@ class Settings(BaseSettings):
 
     APP_ENV: str = "development"
 
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+
     @property
     def DATABASE_URL(self) -> str:
         return (
