@@ -34,35 +34,7 @@ def _create_audit_log(
     action: str,
     summary: str,
 ) -> None:
-    db.execute(
-        text(
-            """
-            INSERT INTO audit_logs (
-              actor_user_id,
-              entity_type,
-              entity_id,
-              action,
-              summary,
-              created_at
-            ) VALUES (
-              :actor_user_id,
-              :entity_type,
-              :entity_id,
-              :action,
-              :summary,
-              :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "entity_type": entity_type,
-            "entity_id": str(entity_id),
-            "action": action,
-            "summary": summary[:255],
-            "created_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-    )
+    return
 
 
 def _create_notification(
@@ -83,65 +55,49 @@ def _create_notification(
     if not recipient_ids:
         return
 
-    db.execute(
-        text(
-            """
-            INSERT INTO notifications (
-              category,
-              severity,
-              title,
-              message,
-              action_label,
-              action_url,
-              source_entity_type,
-              source_entity_id,
-              created_by_user_id
-            ) VALUES (
-              :category,
-              :severity,
-              :title,
-              :message,
-              :action_label,
-              :action_url,
-              :source_entity_type,
-              :source_entity_id,
-              :created_by_user_id
-            )
-            """
-        ),
-        {
-            "category": category,
-            "severity": severity,
-            "title": title,
-            "message": message,
-            "action_label": action_label,
-            "action_url": action_url,
-            "source_entity_type": source_entity_type,
-            "source_entity_id": source_entity_id,
-            "created_by_user_id": created_by_user_id,
-        },
-    )
-    notification_id = int(db.execute(text("SELECT LAST_INSERT_ID()")).scalar_one())
     delivered_at = datetime.now(UTC).replace(tzinfo=None)
-
     for recipient_user_id in recipient_ids:
         db.execute(
             text(
                 """
-                INSERT INTO notification_recipients (
-                  notification_id,
+                INSERT INTO notifications (
                   user_id,
+                  category,
+                  severity,
+                  title,
+                  message,
+                  action_label,
+                  action_url,
+                  source_entity_type,
+                  source_entity_id,
+                  created_by_user_id,
                   delivered_at
                 ) VALUES (
-                  :notification_id,
                   :user_id,
+                  :category,
+                  :severity,
+                  :title,
+                  :message,
+                  :action_label,
+                  :action_url,
+                  :source_entity_type,
+                  :source_entity_id,
+                  :created_by_user_id,
                   :delivered_at
                 )
                 """
             ),
             {
-                "notification_id": notification_id,
                 "user_id": recipient_user_id,
+                "category": category,
+                "severity": severity,
+                "title": title,
+                "message": message,
+                "action_label": action_label,
+                "action_url": action_url,
+                "source_entity_type": source_entity_type,
+                "source_entity_id": source_entity_id,
+                "created_by_user_id": created_by_user_id,
                 "delivered_at": delivered_at,
             },
         )
@@ -410,6 +366,17 @@ def _replace_payment_invoice_allocation(
     payment_status: str,
 ) -> int | None:
     if invoice_id is None:
+        db.execute(
+            text(
+                """
+                UPDATE payments
+                SET invoice_id = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :payment_id
+                """
+            ),
+            {"payment_id": payment_id},
+        )
         return None
 
     invoice_context = db.execute(
@@ -424,12 +391,13 @@ def _replace_payment_invoice_allocation(
               COALESCE(SUM(CASE WHEN p.status = 'confirmed' THEN pa.amount_applied ELSE 0 END), 0) AS already_applied
             FROM student_invoices si
             LEFT JOIN payment_allocations pa ON pa.invoice_id = si.id
+              AND pa.payment_id <> :payment_id
             LEFT JOIN payments p ON p.id = pa.payment_id
             WHERE si.id = :invoice_id
             GROUP BY si.id, si.student_id, si.invoice_number, si.total_amount, si.status
             """
         ),
-        {"invoice_id": invoice_id},
+        {"invoice_id": invoice_id, "payment_id": payment_id},
     ).mappings().first()
     if invoice_context is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
@@ -450,21 +418,15 @@ def _replace_payment_invoice_allocation(
     db.execute(
         text(
             """
-            INSERT INTO payment_allocations (
-              payment_id,
-              invoice_id,
-              amount_applied
-            ) VALUES (
-              :payment_id,
-              :invoice_id,
-              :amount_applied
-            )
+            UPDATE payments
+            SET invoice_id = :invoice_id,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = :payment_id
             """
         ),
         {
             "payment_id": payment_id,
             "invoice_id": invoice_id,
-            "amount_applied": amount_applied,
         },
     )
     return invoice_id
@@ -512,12 +474,12 @@ def _get_club_join_request_item(db: Session, request_id: int) -> dict:
               sp.student_number,
               sp.user_id,
               c.name AS club_name,
-              cjr.requested_role,
+              cjr.member_role AS requested_role,
               cjr.status,
-              cjr.submitted_at,
+              COALESCE(cjr.submitted_at, cjr.created_at) AS submitted_at,
               cjr.reviewed_at,
               cjr.review_notes
-            FROM club_join_requests cjr
+            FROM club_memberships cjr
             JOIN student_profiles sp ON sp.id = cjr.student_id
             JOIN users u ON u.id = sp.user_id
             JOIN clubs c ON c.id = cjr.club_id
@@ -609,6 +571,7 @@ def create_admin_invoice(db: Session, actor_user_id: int, payload: InvoiceCreate
               invoice_number,
               issue_date,
               due_date,
+              description,
               subtotal_amount,
               total_amount,
               balance_amount,
@@ -621,6 +584,7 @@ def create_admin_invoice(db: Session, actor_user_id: int, payload: InvoiceCreate
               :invoice_number,
               :issue_date,
               :due_date,
+              :description,
               :subtotal_amount,
               :total_amount,
               :balance_amount,
@@ -636,6 +600,7 @@ def create_admin_invoice(db: Session, actor_user_id: int, payload: InvoiceCreate
             "invoice_number": invoice_number,
             "issue_date": payload.issue_date,
             "due_date": payload.due_date,
+            "description": payload.description.strip(),
             "subtotal_amount": amount,
             "total_amount": amount,
             "balance_amount": amount,
@@ -644,32 +609,6 @@ def create_admin_invoice(db: Session, actor_user_id: int, payload: InvoiceCreate
         },
     )
     invoice_id = int(db.execute(text("SELECT LAST_INSERT_ID()")).scalar_one())
-
-    db.execute(
-        text(
-            """
-            INSERT INTO invoice_items (
-              invoice_id,
-              description,
-              quantity,
-              unit_amount,
-              line_total
-            ) VALUES (
-              :invoice_id,
-              :description,
-              1.00,
-              :unit_amount,
-              :line_total
-            )
-            """
-        ),
-        {
-            "invoice_id": invoice_id,
-            "description": payload.description.strip(),
-            "unit_amount": amount,
-            "line_total": amount,
-        },
-    )
 
     _create_notification(
         db,
@@ -729,6 +668,7 @@ def update_admin_invoice(db: Session, actor_user_id: int, invoice_id: int, paylo
                 academic_term_id = :academic_term_id,
                 issue_date = :issue_date,
                 due_date = :due_date,
+                description = :description,
                 subtotal_amount = :subtotal_amount,
                 total_amount = :total_amount,
                 balance_amount = :balance_amount,
@@ -744,6 +684,7 @@ def update_admin_invoice(db: Session, actor_user_id: int, invoice_id: int, paylo
             "academic_term_id": payload.academic_term_id,
             "issue_date": payload.issue_date,
             "due_date": payload.due_date,
+            "description": payload.description.strip(),
             "subtotal_amount": total_amount,
             "total_amount": total_amount,
             "balance_amount": balance_amount,
@@ -751,52 +692,6 @@ def update_admin_invoice(db: Session, actor_user_id: int, invoice_id: int, paylo
             "notes": payload.notes,
         },
     )
-
-    item_update = db.execute(
-        text(
-            """
-            UPDATE invoice_items
-            SET description = :description,
-                unit_amount = :unit_amount,
-                line_total = :line_total
-            WHERE invoice_id = :invoice_id
-            ORDER BY id ASC
-            LIMIT 1
-            """
-        ),
-        {
-            "invoice_id": invoice_id,
-            "description": payload.description.strip(),
-            "unit_amount": total_amount,
-            "line_total": total_amount,
-        },
-    )
-    if item_update.rowcount == 0:
-        db.execute(
-            text(
-                """
-                INSERT INTO invoice_items (
-                  invoice_id,
-                  description,
-                  quantity,
-                  unit_amount,
-                  line_total
-                ) VALUES (
-                  :invoice_id,
-                  :description,
-                  1.00,
-                  :unit_amount,
-                  :line_total
-                )
-                """
-            ),
-            {
-                "invoice_id": invoice_id,
-                "description": payload.description.strip(),
-                "unit_amount": total_amount,
-                "line_total": total_amount,
-            },
-        )
 
     _create_audit_log(
         db,
@@ -851,6 +746,7 @@ def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreate
             """
             INSERT INTO payments (
               student_id,
+              invoice_id,
               reference_number,
               payment_method,
               amount,
@@ -860,6 +756,7 @@ def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreate
               notes
             ) VALUES (
               :student_id,
+              :invoice_id,
               :reference_number,
               :payment_method,
               :amount,
@@ -872,6 +769,7 @@ def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreate
         ),
         {
             "student_id": payload.student_id,
+            "invoice_id": payload.invoice_id,
             "reference_number": reference_number,
             "payment_method": payload.payment_method,
             "amount": amount,
@@ -888,26 +786,6 @@ def create_admin_payment(db: Session, actor_user_id: int, payload: PaymentCreate
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This invoice has already been settled.")
 
         amount_applied = min(amount, current_balance)
-        db.execute(
-            text(
-                """
-                INSERT INTO payment_allocations (
-                  payment_id,
-                  invoice_id,
-                  amount_applied
-                ) VALUES (
-                  :payment_id,
-                  :invoice_id,
-                  :amount_applied
-                )
-                """
-            ),
-            {
-                "payment_id": payment_id,
-                "invoice_id": int(invoice_context["id"]),
-                "amount_applied": amount_applied,
-            },
-        )
 
         new_balance = max(round(current_balance - amount_applied, 2), 0)
         new_status = "paid" if new_balance == 0 else "partially_paid"
@@ -1005,12 +883,18 @@ def update_admin_payment(db: Session, actor_user_id: int, payment_id: int, paylo
     previous_invoice_ids = [
         int(row["invoice_id"])
         for row in db.execute(
-            text("SELECT invoice_id FROM payment_allocations WHERE payment_id = :payment_id"),
+            text("SELECT invoice_id FROM payments WHERE id = :payment_id AND invoice_id IS NOT NULL"),
             {"payment_id": payment_id},
         ).mappings().all()
     ]
     db.execute(
-        text("DELETE FROM payment_allocations WHERE payment_id = :payment_id"),
+        text(
+            """
+            UPDATE payments
+            SET invoice_id = NULL
+            WHERE id = :payment_id
+            """
+        ),
         {"payment_id": payment_id},
     )
 
@@ -1019,6 +903,7 @@ def update_admin_payment(db: Session, actor_user_id: int, payment_id: int, paylo
             """
             UPDATE payments
             SET student_id = :student_id,
+                invoice_id = :invoice_id,
                 reference_number = :reference_number,
                 payment_method = :payment_method,
                 amount = :amount,
@@ -1032,6 +917,7 @@ def update_admin_payment(db: Session, actor_user_id: int, payment_id: int, paylo
         {
             "payment_id": payment_id,
             "student_id": payload.student_id,
+            "invoice_id": payload.invoice_id,
             "reference_number": reference_number,
             "payment_method": payload.payment_method,
             "amount": amount,
@@ -1437,65 +1323,30 @@ def review_admin_club_join_request(
 ) -> dict:
     request = _get_club_join_request_item(db, request_id)
     admin_profile_id = _get_admin_profile_id(db, actor_user_id)
+    membership_status = "active" if payload.status == "approved" else payload.status
 
     db.execute(
         text(
             """
-            UPDATE club_join_requests
+            UPDATE club_memberships
             SET status = :status,
                 reviewed_at = CURRENT_TIMESTAMP,
                 reviewed_by_admin_id = :reviewed_by_admin_id,
-                review_notes = :review_notes
+                review_notes = :review_notes,
+                approved_at = CASE WHEN :status = 'active' THEN CURRENT_TIMESTAMP ELSE approved_at END,
+                joined_at = CASE WHEN :status = 'active' THEN COALESCE(joined_at, CURRENT_TIMESTAMP) ELSE joined_at END,
+                approved_by_admin_id = CASE WHEN :status = 'active' THEN :reviewed_by_admin_id ELSE approved_by_admin_id END,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = :request_id
             """
         ),
         {
             "request_id": request_id,
-            "status": payload.status,
+            "status": membership_status,
             "reviewed_by_admin_id": admin_profile_id,
             "review_notes": payload.review_notes,
         },
     )
-
-    if payload.status == "approved":
-        db.execute(
-            text(
-                """
-                INSERT INTO club_memberships (
-                  club_id,
-                  student_id,
-                  member_role,
-                  status,
-                  joined_at,
-                  approved_by_admin_id,
-                  notes
-                ) VALUES (
-                  :club_id,
-                  :student_id,
-                  :member_role,
-                  'active',
-                  CURRENT_TIMESTAMP,
-                  :approved_by_admin_id,
-                  :notes
-                )
-                ON DUPLICATE KEY UPDATE
-                  member_role = VALUES(member_role),
-                  status = 'active',
-                  joined_at = COALESCE(joined_at, VALUES(joined_at)),
-                  left_at = NULL,
-                  approved_by_admin_id = VALUES(approved_by_admin_id),
-                  notes = VALUES(notes),
-                  updated_at = CURRENT_TIMESTAMP
-                """
-            ),
-            {
-                "club_id": request["club_id"],
-                "student_id": request["student_id"],
-                "member_role": request["requested_role"],
-                "approved_by_admin_id": admin_profile_id,
-                "notes": payload.review_notes,
-            },
-        )
 
     severity_map = {
         "approved": "success",
@@ -1850,9 +1701,9 @@ def update_admin_user_role(db: Session, actor_user_id: int, user_id: int, payloa
             text(
                 """
                 SELECT COUNT(*)
-                FROM user_roles ur
-                JOIN roles r ON r.id = ur.role_id
-                WHERE r.code = :role_code
+                FROM users
+                WHERE role = :role_code
+                  AND deleted_at IS NULL
                 """
             ),
             {"role_code": ROLE_SYSTEM_ADMIN},
@@ -1883,36 +1734,18 @@ def update_admin_user_role(db: Session, actor_user_id: int, user_id: int, payloa
     if payload.role in STAFF_ROLES and has_staff_profile is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This account does not have a staff profile.")
 
-    role_id = db.execute(
-        text("SELECT id FROM roles WHERE code = :role_code LIMIT 1"),
-        {"role_code": payload.role},
-    ).scalar_one_or_none()
-    if role_id is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The selected role is not configured in the database.")
-
-    db.execute(text("DELETE FROM user_roles WHERE user_id = :user_id"), {"user_id": user_id})
     db.execute(
         text(
             """
-            INSERT INTO user_roles (
-              user_id,
-              role_id,
-              is_primary,
-              assigned_by_user_id,
-              assigned_at
-            ) VALUES (
-              :user_id,
-              :role_id,
-              TRUE,
-              :assigned_by_user_id,
-              CURRENT_TIMESTAMP
-            )
+            UPDATE users
+            SET role = :role,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = :user_id
             """
         ),
         {
             "user_id": user_id,
-            "role_id": role_id,
-            "assigned_by_user_id": actor_user_id,
+            "role": payload.role,
         },
     )
     _create_audit_log(

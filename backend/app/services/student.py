@@ -64,35 +64,7 @@ def _create_audit_log(
     action: str,
     summary: str,
 ) -> None:
-    db.execute(
-        text(
-            """
-            INSERT INTO audit_logs (
-              actor_user_id,
-              entity_type,
-              entity_id,
-              action,
-              summary,
-              created_at
-            ) VALUES (
-              :actor_user_id,
-              :entity_type,
-              :entity_id,
-              :action,
-              :summary,
-              :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "entity_type": entity_type,
-            "entity_id": str(entity_id),
-            "action": action,
-            "summary": summary[:255],
-            "created_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-    )
+    return
 
 
 def _create_notification(
@@ -113,65 +85,49 @@ def _create_notification(
     if not recipient_ids:
         return
 
-    db.execute(
-        text(
-            """
-            INSERT INTO notifications (
-              category,
-              severity,
-              title,
-              message,
-              action_label,
-              action_url,
-              source_entity_type,
-              source_entity_id,
-              created_by_user_id
-            ) VALUES (
-              :category,
-              :severity,
-              :title,
-              :message,
-              :action_label,
-              :action_url,
-              :source_entity_type,
-              :source_entity_id,
-              :created_by_user_id
-            )
-            """
-        ),
-        {
-            "category": category,
-            "severity": severity,
-            "title": title,
-            "message": message,
-            "action_label": action_label,
-            "action_url": action_url,
-            "source_entity_type": source_entity_type,
-            "source_entity_id": source_entity_id,
-            "created_by_user_id": created_by_user_id,
-        },
-    )
-    notification_id = int(db.execute(text("SELECT LAST_INSERT_ID()")).scalar_one())
     delivered_at = datetime.now(UTC).replace(tzinfo=None)
-
     for recipient_user_id in recipient_ids:
         db.execute(
             text(
                 """
-                INSERT INTO notification_recipients (
-                  notification_id,
+                INSERT INTO notifications (
                   user_id,
+                  category,
+                  severity,
+                  title,
+                  message,
+                  action_label,
+                  action_url,
+                  source_entity_type,
+                  source_entity_id,
+                  created_by_user_id,
                   delivered_at
                 ) VALUES (
-                  :notification_id,
                   :user_id,
+                  :category,
+                  :severity,
+                  :title,
+                  :message,
+                  :action_label,
+                  :action_url,
+                  :source_entity_type,
+                  :source_entity_id,
+                  :created_by_user_id,
                   :delivered_at
                 )
                 """
             ),
             {
-                "notification_id": notification_id,
                 "user_id": recipient_user_id,
+                "category": category,
+                "severity": severity,
+                "title": title,
+                "message": message,
+                "action_label": action_label,
+                "action_url": action_url,
+                "source_entity_type": source_entity_type,
+                "source_entity_id": source_entity_id,
+                "created_by_user_id": created_by_user_id,
                 "delivered_at": delivered_at,
             },
         )
@@ -201,7 +157,7 @@ def _fetch_chat_messages(db: Session, session_id: int) -> list[dict]:
               metadata_json,
               created_at
             FROM ai_chat_messages
-            WHERE session_id = :session_id
+            WHERE conversation_id = :session_id
             ORDER BY created_at ASC, id ASC
             """
         ),
@@ -226,15 +182,16 @@ def _ensure_student_chat_session(db: Session, user_id: int) -> tuple[dict, dict,
         text(
             """
             SELECT
-              id,
+              conversation_id AS id,
               title,
-              status,
-              started_at,
-              last_message_at
-            FROM ai_chat_sessions
+              session_status AS status,
+              MIN(started_at) AS started_at,
+              MAX(last_message_at) AS last_message_at
+            FROM ai_chat_messages
             WHERE student_id = :student_id
-              AND status = 'active'
-            ORDER BY COALESCE(last_message_at, started_at) DESC, id DESC
+              AND session_status = 'active'
+            GROUP BY conversation_id, title, session_status
+            ORDER BY COALESCE(MAX(last_message_at), MIN(started_at)) DESC, conversation_id DESC
             LIMIT 1
             """
         ),
@@ -243,41 +200,29 @@ def _ensure_student_chat_session(db: Session, user_id: int) -> tuple[dict, dict,
 
     if session is None:
         started_at = datetime.now(UTC).replace(tzinfo=None)
-        db.execute(
-            text(
-                """
-                INSERT INTO ai_chat_sessions (
-                  student_id,
-                  title,
-                  status,
-                  started_at,
-                  last_message_at
-                ) VALUES (
-                  :student_id,
-                  :title,
-                  'active',
-                  :started_at,
-                  :started_at
-                )
-                """
-            ),
-            {
-                "student_id": student["student_id"],
-                "title": "Academic assistant",
-                "started_at": started_at,
-            },
+        session_id = int(
+            db.execute(text("SELECT COALESCE(MAX(conversation_id), 0) + 1 FROM ai_chat_messages")).scalar_one()
         )
-        session_id = int(db.execute(text("SELECT LAST_INSERT_ID()")).scalar_one())
         db.execute(
             text(
                 """
                 INSERT INTO ai_chat_messages (
-                  session_id,
+                  conversation_id,
+                  student_id,
+                  title,
+                  session_status,
+                  started_at,
+                  last_message_at,
                   sender_type,
                   message_text,
                   metadata_json
                 ) VALUES (
-                  :session_id,
+                  :conversation_id,
+                  :student_id,
+                  :title,
+                  'active',
+                  :started_at,
+                  :started_at,
                   'assistant',
                   :message_text,
                   :metadata_json
@@ -285,7 +230,10 @@ def _ensure_student_chat_session(db: Session, user_id: int) -> tuple[dict, dict,
                 """
             ),
             {
-                "session_id": session_id,
+                "conversation_id": session_id,
+                "student_id": student["student_id"],
+                "title": "Academic assistant",
+                "started_at": started_at,
                 "message_text": (
                     f"Hi {student['first_name']}. I am your CIS academic assistant. "
                     "I can help with course planning, GPA trends, timetable questions, finance reminders, and campus updates. "
@@ -293,16 +241,6 @@ def _ensure_student_chat_session(db: Session, user_id: int) -> tuple[dict, dict,
                 ),
                 "metadata_json": json.dumps({"kind": "welcome"}),
             },
-        )
-        db.execute(
-            text(
-                """
-                UPDATE ai_chat_sessions
-                SET last_message_at = CURRENT_TIMESTAMP
-                WHERE id = :session_id
-                """
-            ),
-            {"session_id": session_id},
         )
         db.commit()
         session = {
@@ -699,7 +637,7 @@ def update_student_profile(db: Session, user_id: int, payload) -> dict:
     db.execute(
         text(
             """
-            UPDATE student_profiles
+            UPDATE users
             SET date_of_birth = :date_of_birth,
                 address_line_1 = :address_line_1,
                 address_line_2 = :address_line_2,
@@ -708,6 +646,7 @@ def update_student_profile(db: Session, user_id: int, payload) -> dict:
                 postal_code = :postal_code,
                 country = :country
             WHERE id = :student_id
+              AND role = 'Student'
             """
         ),
         {
@@ -897,7 +836,7 @@ def mark_student_inbox_item_read(db: Session, user_id: int, recipient_id: int) -
     updated = db.execute(
         text(
             """
-            UPDATE notification_recipients
+            UPDATE notifications
             SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
             WHERE id = :recipient_id
               AND user_id = :user_id
@@ -917,7 +856,7 @@ def mark_all_student_inbox_items_read(db: Session, user_id: int) -> dict:
     db.execute(
         text(
             """
-            UPDATE notification_recipients
+            UPDATE notifications
             SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
             WHERE user_id = :user_id
               AND archived_at IS NULL
@@ -933,7 +872,7 @@ def archive_student_inbox_item(db: Session, user_id: int, recipient_id: int) -> 
     updated = db.execute(
         text(
             """
-            UPDATE notification_recipients
+            UPDATE notifications
             SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP),
                 archived_at = CURRENT_TIMESTAMP
             WHERE id = :recipient_id
@@ -1406,10 +1345,10 @@ def join_club(db: Session, user_id: int, club_id: int) -> dict:
     db.execute(
         text(
             """
-            INSERT INTO club_join_requests (
+            INSERT INTO club_memberships (
               club_id,
               student_id,
-              requested_role,
+              member_role,
               status,
               submitted_at
             ) VALUES (
@@ -2107,17 +2046,34 @@ def send_student_chat_message(db: Session, user_id: int, message_text: str) -> d
         text(
             """
             INSERT INTO ai_chat_messages (
-              session_id,
+              conversation_id,
+              student_id,
+              title,
+              session_status,
+              started_at,
+              last_message_at,
               sender_type,
               message_text
             ) VALUES (
               :session_id,
+              :student_id,
+              :title,
+              'active',
+              :started_at,
+              :last_message_at,
               'student',
               :message_text
             )
             """
         ),
-        {"session_id": session_id, "message_text": clean_message},
+        {
+            "session_id": session_id,
+            "student_id": student["student_id"],
+            "title": session.get("title") or "Academic assistant",
+            "started_at": session.get("started_at"),
+            "last_message_at": datetime.now(UTC).replace(tzinfo=None),
+            "message_text": clean_message,
+        },
     )
 
     messages = _fetch_chat_messages(db, session_id)
@@ -2126,16 +2082,30 @@ def send_student_chat_message(db: Session, user_id: int, message_text: str) -> d
     except AssistantServiceUnavailable as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
+    title = session.get("title") or "Academic assistant"
+    if title == "Academic assistant" and clean_message:
+        title = clean_message[:60]
+
     db.execute(
         text(
             """
             INSERT INTO ai_chat_messages (
-              session_id,
+              conversation_id,
+              student_id,
+              title,
+              session_status,
+              started_at,
+              last_message_at,
               sender_type,
               message_text,
               metadata_json
             ) VALUES (
               :session_id,
+              :student_id,
+              :title,
+              'active',
+              :started_at,
+              :last_message_at,
               'assistant',
               :message_text,
               :metadata_json
@@ -2144,22 +2114,22 @@ def send_student_chat_message(db: Session, user_id: int, message_text: str) -> d
         ),
         {
             "session_id": session_id,
+            "student_id": student["student_id"],
+            "title": title,
+            "started_at": session.get("started_at"),
+            "last_message_at": datetime.now(UTC).replace(tzinfo=None),
             "message_text": assistant_reply,
             "metadata_json": json.dumps(assistant_metadata),
         },
     )
 
-    title = session.get("title") or "Academic assistant"
-    if title == "Academic assistant" and clean_message:
-        title = clean_message[:60]
-
     db.execute(
         text(
             """
-            UPDATE ai_chat_sessions
+            UPDATE ai_chat_messages
             SET title = :title,
                 last_message_at = CURRENT_TIMESTAMP
-            WHERE id = :session_id
+            WHERE conversation_id = :session_id
             """
         ),
         {"title": title, "session_id": session_id},

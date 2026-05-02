@@ -1,6 +1,6 @@
 ﻿# CIS - Campus Information System
 
-CIS is a full-stack campus information system for a university-style environment. It includes a Vite + React + TypeScript frontend, a FastAPI backend, and a MySQL/MariaDB schema with demo data for local development.
+CIS is a full-stack campus information system for a university-style environment. It includes a Vite + React + TypeScript frontend, a FastAPI backend, and a lean MySQL/MariaDB schema with demo data for local development.
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ src/                       React frontend
 backend/app/               FastAPI backend
 backend/database/mysql/    Schema, views, and seed SQL
 backend/tests/             Backend tests
-docs/                      Requirements, diagrams, demo credentials
+docs/                      Requirements and demo credentials
 scripts/                   Windows helper scripts
 ```
 
@@ -61,7 +61,7 @@ DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@127.0.0.1:3306/cis
 
 ## Database Setup
 
-Import these SQL files in order. The files create the `cis` database, schema, views, reference data, catalog data, RBAC roles, and demo users.
+Import these SQL files in order into a fresh `cis` database. The files create the 21 mandatory physical tables, compatibility/reporting views, core demo data, and demo users. If you already have an older `cis` database, drop or rename it first so the removed physical tables do not remain beside the lean schema.
 
 For the easiest XAMPP/phpMyAdmin import, use the combined file:
 

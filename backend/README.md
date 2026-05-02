@@ -87,7 +87,7 @@ After that, sign in through `POST /api/v1/auth/login`, then use:
 
 ## Database
 
-The project now includes a production-style MySQL schema for XAMPP in:
+The project now includes a lean 21-table MySQL schema for XAMPP in:
 
 - `backend/database/mysql/01_schema.sql`
 - `backend/database/mysql/02_seed_reference.sql`
@@ -99,7 +99,7 @@ The project now includes a production-style MySQL schema for XAMPP in:
 - `backend/database/mysql/08_migrate_rbac_roles.sql`
 - `backend/database/mysql/09_seed_demo_users.sql`
 
-Import order:
+Import order for a fresh `cis` database. If an older `cis` database already exists, drop or rename it first so removed physical tables do not remain beside the lean schema:
 
 ```powershell
 mysql -u root -p < backend/database/mysql/01_schema.sql
@@ -113,19 +113,17 @@ mysql -u root -p < backend/database/mysql/08_migrate_rbac_roles.sql
 mysql -u root -p < backend/database/mysql/09_seed_demo_users.sql
 ```
 
-`04_seed_core_data.sql` is optional but recommended. It seeds departments, programs, terms, courses, clubs, announcements, and events while leaving user accounts under System Admin control. `09_seed_demo_users.sql` adds fake login accounts for development and demos.
+`04_seed_core_data.sql` is optional but recommended. It seeds programs, terms, courses, clubs, announcements, and events while leaving user accounts under System Admin control. `09_seed_demo_users.sql` adds fake login accounts for development and demos.
 
 The schema covers:
 
-- users, roles, permissions, and auth token tables
-- student, instructor, and staff profile tables
+- users with direct role/profile fields and auth token storage
 - departments, programs, terms, courses, offerings, and enrollments
 - attendance and grades
-- recommendations and risk assessments
-- staff-maintained invoices, aid awards, payment records, optional invoice links, and financial holds
-- clubs, memberships, and join requests
-- announcements, events, and inbox notifications
-- AI assistant chat history and system settings
+- staff-maintained invoices, payment records, optional invoice links, and financial holds
+- clubs and memberships, including pending join requests
+- announcements, events, event registrations, and inbox notifications
+- AI assistant chat history
 
 ## Docker
 

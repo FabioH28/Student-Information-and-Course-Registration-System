@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.rbac import ROLE_SYSTEM_ADMIN
+from app.core.rbac import ROLE_PERMISSIONS, ROLE_SYSTEM_ADMIN
 from app.core.security import (
     create_access_token,
     decode_access_token,
@@ -44,8 +44,8 @@ def _identity_from_row(row: Any | None) -> AuthenticatedIdentity | None:
     if row is None:
         return None
 
-    roles = [role for role in (row["roles_csv"] or "").split(",") if role]
-    permissions = [permission for permission in (row["permissions_csv"] or "").split(",") if permission]
+    roles = [row["role"]] if row["role"] else []
+    permissions = sorted({permission for role in roles for permission in ROLE_PERMISSIONS.get(role, ())})
     return AuthenticatedIdentity(
         id=row["id"],
         email=row["email"],
@@ -70,23 +70,10 @@ def get_identity_by_email(db: Session, email: str) -> AuthenticatedIdentity | No
           u.last_name,
           u.status,
           u.must_change_password,
-          GROUP_CONCAT(DISTINCT r.code ORDER BY ur.is_primary DESC, r.id SEPARATOR ',') AS roles_csv,
-          GROUP_CONCAT(DISTINCT p.code ORDER BY p.code SEPARATOR ',') AS permissions_csv
+          u.role
         FROM users u
-        LEFT JOIN user_roles ur ON ur.user_id = u.id
-        LEFT JOIN roles r ON r.id = ur.role_id
-        LEFT JOIN role_permissions rp ON rp.role_id = ur.role_id
-        LEFT JOIN permissions p ON p.id = rp.permission_id
         WHERE u.email = :email
           AND u.deleted_at IS NULL
-        GROUP BY
-          u.id,
-          u.email,
-          u.password_hash,
-          u.first_name,
-          u.last_name,
-          u.status,
-          u.must_change_password
         """
     )
     row = db.execute(query, {"email": email.lower().strip()}).mappings().first()
@@ -104,23 +91,10 @@ def get_identity_by_user_id(db: Session, user_id: int) -> AuthenticatedIdentity 
           u.last_name,
           u.status,
           u.must_change_password,
-          GROUP_CONCAT(DISTINCT r.code ORDER BY ur.is_primary DESC, r.id SEPARATOR ',') AS roles_csv,
-          GROUP_CONCAT(DISTINCT p.code ORDER BY p.code SEPARATOR ',') AS permissions_csv
+          u.role
         FROM users u
-        LEFT JOIN user_roles ur ON ur.user_id = u.id
-        LEFT JOIN roles r ON r.id = ur.role_id
-        LEFT JOIN role_permissions rp ON rp.role_id = ur.role_id
-        LEFT JOIN permissions p ON p.id = rp.permission_id
         WHERE u.id = :user_id
           AND u.deleted_at IS NULL
-        GROUP BY
-          u.id,
-          u.email,
-          u.password_hash,
-          u.first_name,
-          u.last_name,
-          u.status,
-          u.must_change_password
         """
     )
     row = db.execute(query, {"user_id": user_id}).mappings().first()
@@ -149,44 +123,17 @@ def _create_audit_log(
     action: str,
     summary: str,
 ) -> None:
-    db.execute(
-        text(
-            """
-            INSERT INTO audit_logs (
-              actor_user_id,
-              entity_type,
-              entity_id,
-              action,
-              summary,
-              created_at
-            ) VALUES (
-              :actor_user_id,
-              :entity_type,
-              :entity_id,
-              :action,
-              :summary,
-              :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "entity_type": entity_type,
-            "entity_id": str(entity_id),
-            "action": action,
-            "summary": summary[:255],
-            "created_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-    )
+    return
 
 
 def _revoke_all_refresh_tokens(db: Session, user_id: int) -> None:
     db.execute(
         text(
             """
-            UPDATE auth_refresh_tokens
+            UPDATE auth_tokens
             SET revoked_at = COALESCE(revoked_at, :revoked_at)
             WHERE user_id = :user_id
+              AND token_type = 'refresh'
               AND revoked_at IS NULL
             """
         ),
@@ -204,12 +151,14 @@ def _issue_password_reset_token(db: Session, user_id: int) -> str:
     db.execute(
         text(
             """
-            INSERT INTO password_reset_tokens (
+            INSERT INTO auth_tokens (
               user_id,
+              token_type,
               token_hash,
               expires_at
             ) VALUES (
               :user_id,
+              'password_reset',
               :token_hash,
               :expires_at
             )
@@ -230,12 +179,14 @@ def _store_refresh_token(db: Session, user_id: int, refresh_token: str) -> None:
     db.execute(
         text(
             """
-            INSERT INTO auth_refresh_tokens (
+            INSERT INTO auth_tokens (
               user_id,
+              token_type,
               token_hash,
               expires_at
             ) VALUES (
               :user_id,
+              'refresh',
               :token_hash,
               :expires_at
             )
@@ -348,8 +299,9 @@ def refresh_access_token(db: Session, refresh_token: str) -> TokenResponse:
         text(
             """
             SELECT user_id
-            FROM auth_refresh_tokens
+            FROM auth_tokens
             WHERE token_hash = :token_hash
+              AND token_type = 'refresh'
               AND revoked_at IS NULL
               AND expires_at > :current_time
             ORDER BY created_at DESC
@@ -371,9 +323,10 @@ def refresh_access_token(db: Session, refresh_token: str) -> TokenResponse:
     db.execute(
         text(
             """
-            UPDATE auth_refresh_tokens
+            UPDATE auth_tokens
             SET revoked_at = :revoked_at
             WHERE token_hash = :token_hash
+              AND token_type = 'refresh'
             """
         ),
         {
@@ -445,8 +398,9 @@ def confirm_password_reset(db: Session, token: str, new_password: str) -> TokenR
         text(
             """
             SELECT id, user_id
-            FROM password_reset_tokens
+            FROM auth_tokens
             WHERE token_hash = :token_hash
+              AND token_type = 'password_reset'
               AND used_at IS NULL
               AND expires_at > :current_time
             ORDER BY created_at DESC
@@ -483,9 +437,10 @@ def confirm_password_reset(db: Session, token: str, new_password: str) -> TokenR
     db.execute(
         text(
             """
-            UPDATE password_reset_tokens
+            UPDATE auth_tokens
             SET used_at = :used_at
             WHERE id = :token_id
+              AND token_type = 'password_reset'
             """
         ),
         {
@@ -571,9 +526,9 @@ def bootstrap_admin_account(
         text(
             """
             SELECT COUNT(*)
-            FROM user_roles ur
-            JOIN roles r ON r.id = ur.role_id
-            WHERE r.code = :role_code
+            FROM users
+            WHERE role = :role_code
+              AND deleted_at IS NULL
             """
         ),
         {"role_code": ROLE_SYSTEM_ADMIN},
@@ -597,6 +552,11 @@ def bootstrap_admin_account(
               password_hash,
               first_name,
               last_name,
+              role,
+              employee_number,
+              title,
+              office_location,
+              employment_status,
               status,
               must_change_password,
               account_origin,
@@ -606,6 +566,11 @@ def bootstrap_admin_account(
               :password_hash,
               :first_name,
               :last_name,
+              'System Admin',
+              :employee_number,
+              :title,
+              :office_location,
+              'active',
               'active',
               FALSE,
               'admin_provisioned',
@@ -618,47 +583,14 @@ def bootstrap_admin_account(
             "password_hash": hash_password(password),
             "first_name": first_name.strip(),
             "last_name": last_name.strip(),
+            "employee_number": employee_number,
+            "title": title,
+            "office_location": office_location,
             "invited_at": datetime.now(UTC).replace(tzinfo=None),
         },
     )
 
     user_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar_one()
-    admin_role_id = db.execute(text("SELECT id FROM roles WHERE code = :role_code"), {"role_code": ROLE_SYSTEM_ADMIN}).scalar_one()
-
-    db.execute(
-        text(
-            """
-            INSERT INTO user_roles (user_id, role_id, is_primary, assigned_at)
-            VALUES (:user_id, :role_id, TRUE, :assigned_at)
-            """
-        ),
-        {"user_id": user_id, "role_id": admin_role_id, "assigned_at": datetime.now(UTC).replace(tzinfo=None)},
-    )
-    db.execute(
-        text(
-            """
-            INSERT INTO admin_profiles (
-              user_id,
-              employee_number,
-              title,
-              office_location,
-              employment_status
-            ) VALUES (
-              :user_id,
-              :employee_number,
-              :title,
-              :office_location,
-              'active'
-            )
-            """
-        ),
-        {
-            "user_id": user_id,
-            "employee_number": employee_number,
-            "title": title,
-            "office_location": office_location,
-        },
-    )
     db.commit()
 
     identity = get_identity_by_user_id(db, user_id)
@@ -673,9 +605,9 @@ def get_bootstrap_status(db: Session) -> dict[str, int | bool]:
         text(
             """
             SELECT COUNT(*)
-            FROM user_roles ur
-            JOIN roles r ON r.id = ur.role_id
-            WHERE r.code = :role_code
+            FROM users
+            WHERE role = :role_code
+              AND deleted_at IS NULL
             """
         ),
         {"role_code": ROLE_SYSTEM_ADMIN},

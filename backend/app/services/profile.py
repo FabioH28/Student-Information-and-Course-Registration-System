@@ -1,5 +1,3 @@
-from datetime import UTC, datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -102,62 +100,17 @@ def update_user_profile(db: Session, user_id: int, payload: UserProfileUpdateReq
     db.execute(
         text(
             """
-            UPDATE teacher_profiles
+            UPDATE users
             SET title = :title,
                 office_location = :office_location,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = :user_id
+            WHERE id = :user_id
             """
         ),
         {
             "user_id": user_id,
             "title": _nullable_text(payload.title),
             "office_location": _nullable_text(payload.office_location),
-        },
-    )
-
-    db.execute(
-        text(
-            """
-            UPDATE admin_profiles
-            SET title = :title,
-                office_location = :office_location,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = :user_id
-            """
-        ),
-        {
-            "user_id": user_id,
-            "title": _nullable_text(payload.title),
-            "office_location": _nullable_text(payload.office_location),
-        },
-    )
-
-    db.execute(
-        text(
-            """
-            INSERT INTO audit_logs (
-              actor_user_id,
-              entity_type,
-              entity_id,
-              action,
-              summary,
-              created_at
-            ) VALUES (
-              :actor_user_id,
-              'user_profile',
-              :entity_id,
-              'update',
-              :summary,
-              :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": user_id,
-            "entity_id": str(user_id),
-            "summary": f"{identity.email} updated their profile.",
-            "created_at": datetime.now(UTC).replace(tzinfo=None),
         },
     )
     db.commit()

@@ -588,48 +588,13 @@ def publish_final_grades(
         db.execute(
             text(
                 """
-                INSERT INTO final_grades (
-                  enrollment_id,
-                  numeric_grade,
-                  letter_grade,
-                  grade_points,
-                  status,
-                  published_at,
-                  approved_by_teacher_id
-                ) VALUES (
-                  :enrollment_id,
-                  :numeric_grade,
-                  :letter_grade,
-                  :grade_points,
-                  'published',
-                  :published_at,
-                  :approved_by_teacher_id
-                )
-                ON DUPLICATE KEY UPDATE
-                  numeric_grade = VALUES(numeric_grade),
-                  letter_grade = VALUES(letter_grade),
-                  grade_points = VALUES(grade_points),
-                  status = 'published',
-                  published_at = VALUES(published_at),
-                  approved_by_teacher_id = VALUES(approved_by_teacher_id)
-                """
-            ),
-            {
-                "enrollment_id": grade.enrollment_id,
-                "numeric_grade": grade.numeric_grade,
-                "letter_grade": letter_grade,
-                "grade_points": grade_points,
-                "published_at": published_at,
-                "approved_by_teacher_id": teacher.get("teacher_id"),
-            },
-        )
-        db.execute(
-            text(
-                """
                 UPDATE enrollments
                 SET final_numeric_grade = :numeric_grade,
                     final_letter_grade = :letter_grade,
                     grade_points = :grade_points,
+                    final_grade_status = 'published',
+                    final_grade_published_at = :published_at,
+                    final_grade_approved_by_teacher_id = :approved_by_teacher_id,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :enrollment_id
                 """
@@ -638,6 +603,8 @@ def publish_final_grades(
                 "numeric_grade": grade.numeric_grade,
                 "letter_grade": letter_grade,
                 "grade_points": grade_points,
+                "published_at": published_at,
+                "approved_by_teacher_id": teacher.get("teacher_id"),
                 "enrollment_id": grade.enrollment_id,
             },
         )

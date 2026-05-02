@@ -36,5 +36,6 @@ __pycache__/
 
 # Local database backups and machine-specific dumps
 backend/database/xampp-backups/
+backend/database/mysql/backups/
 backend/database/mysql/backup-*.sql
 *.bak-*

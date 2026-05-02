@@ -46,35 +46,7 @@ def _create_audit_log(
     action: str,
     summary: str,
 ) -> None:
-    db.execute(
-        text(
-            """
-            INSERT INTO audit_logs (
-              actor_user_id,
-              entity_type,
-              entity_id,
-              action,
-              summary,
-              created_at
-            ) VALUES (
-              :actor_user_id,
-              :entity_type,
-              :entity_id,
-              :action,
-              :summary,
-              :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "entity_type": entity_type,
-            "entity_id": str(entity_id),
-            "action": action,
-            "summary": summary[:255],
-            "created_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-    )
+    return
 
 
 def _get_admin_profile_id(db: Session, user_id: int) -> int:
@@ -156,65 +128,49 @@ def _create_notification(
     if not recipient_ids:
         return
 
-    db.execute(
-        text(
-            """
-            INSERT INTO notifications (
-              category,
-              severity,
-              title,
-              message,
-              action_label,
-              action_url,
-              source_entity_type,
-              source_entity_id,
-              created_by_user_id
-            ) VALUES (
-              :category,
-              :severity,
-              :title,
-              :message,
-              :action_label,
-              :action_url,
-              :source_entity_type,
-              :source_entity_id,
-              :created_by_user_id
-            )
-            """
-        ),
-        {
-            "category": category,
-            "severity": severity,
-            "title": title,
-            "message": message,
-            "action_label": action_label,
-            "action_url": action_url,
-            "source_entity_type": source_entity_type,
-            "source_entity_id": source_entity_id,
-            "created_by_user_id": created_by_user_id,
-        },
-    )
-    notification_id = int(db.execute(text("SELECT LAST_INSERT_ID()")).scalar_one())
     delivered_at = datetime.now(UTC).replace(tzinfo=None)
-
     for recipient_user_id in recipient_ids:
         db.execute(
             text(
                 """
-                INSERT INTO notification_recipients (
-                  notification_id,
+                INSERT INTO notifications (
                   user_id,
+                  category,
+                  severity,
+                  title,
+                  message,
+                  action_label,
+                  action_url,
+                  source_entity_type,
+                  source_entity_id,
+                  created_by_user_id,
                   delivered_at
                 ) VALUES (
-                  :notification_id,
                   :user_id,
+                  :category,
+                  :severity,
+                  :title,
+                  :message,
+                  :action_label,
+                  :action_url,
+                  :source_entity_type,
+                  :source_entity_id,
+                  :created_by_user_id,
                   :delivered_at
                 )
                 """
             ),
             {
-                "notification_id": notification_id,
                 "user_id": recipient_user_id,
+                "category": category,
+                "severity": severity,
+                "title": title,
+                "message": message,
+                "action_label": action_label,
+                "action_url": action_url,
+                "source_entity_type": source_entity_type,
+                "source_entity_id": source_entity_id,
+                "created_by_user_id": created_by_user_id,
                 "delivered_at": delivered_at,
             },
         )
@@ -815,36 +771,6 @@ def update_admin_teacher_offering_assignments(
         )
 
     assigned_count = len(normalized_ids)
-    db.execute(
-        text(
-            """
-            INSERT INTO audit_logs (
-              actor_user_id,
-              entity_type,
-              entity_id,
-              action,
-              summary,
-              created_at
-            ) VALUES (
-              :actor_user_id,
-              'teacher_assignments',
-              :entity_id,
-              'update',
-              :summary,
-              :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "entity_id": str(teacher_profile_id),
-            "summary": (
-                f"Updated teaching assignments for {teacher['full_name']} "
-                f"({assigned_count} assigned, {reassigned_count} reassigned)"
-            ),
-            "created_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-    )
     db.commit()
 
     workspace = get_admin_teacher_offering_assignments(db, teacher_profile_id)
@@ -1503,38 +1429,26 @@ def update_admin_term(db: Session, term_id: int, payload: AcademicTermUpsertRequ
 
 
 def _sync_primary_course_meeting(db: Session, offering_id: int, payload: CourseOfferingUpsertRequest) -> None:
-    db.execute(text("DELETE FROM course_meetings WHERE course_offering_id = :offering_id"), {"offering_id": offering_id})
-
-    if payload.meeting_day_of_week and payload.meeting_start_time and payload.meeting_end_time:
-        db.execute(
-            text(
-                """
-                INSERT INTO course_meetings (
-                  course_offering_id,
-                  room_id,
-                  day_of_week,
-                  start_time,
-                  end_time,
-                  meeting_type
-                ) VALUES (
-                  :course_offering_id,
-                  :room_id,
-                  :day_of_week,
-                  :start_time,
-                  :end_time,
-                  :meeting_type
-                )
-                """
-            ),
-            {
-                "course_offering_id": offering_id,
-                "room_id": payload.room_id,
-                "day_of_week": payload.meeting_day_of_week,
-                "start_time": payload.meeting_start_time,
-                "end_time": payload.meeting_end_time,
-                "meeting_type": payload.meeting_type,
-            },
-        )
+    db.execute(
+        text(
+            """
+            UPDATE course_offerings
+            SET meeting_day_of_week = :day_of_week,
+                meeting_start_time = :start_time,
+                meeting_end_time = :end_time,
+                meeting_type = :meeting_type,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = :offering_id
+            """
+        ),
+        {
+            "offering_id": offering_id,
+            "day_of_week": payload.meeting_day_of_week,
+            "start_time": payload.meeting_start_time,
+            "end_time": payload.meeting_end_time,
+            "meeting_type": payload.meeting_type,
+        },
+    )
 
 
 def _get_course_offering_item(db: Session, offering_id: int) -> dict:
@@ -2258,22 +2172,46 @@ def create_user_account(db: Session, actor_user_id: int, payload: AdminCreateUse
               first_name,
               last_name,
               phone,
+              role,
               status,
               must_change_password,
               account_origin,
               created_by_user_id,
-              invited_at
+              invited_at,
+              student_number,
+              department_id,
+              program_id,
+              admission_date,
+              current_semester,
+              academic_status,
+              employee_number,
+              title,
+              hire_date,
+              office_location,
+              employment_status
             ) VALUES (
               :email,
               :password_hash,
               :first_name,
               :last_name,
               :phone,
+              :role,
               :status,
               :must_change_password,
               'admin_provisioned',
               :created_by_user_id,
-              :invited_at
+              :invited_at,
+              :student_number,
+              :department_id,
+              :program_id,
+              :admission_date,
+              :current_semester,
+              'active',
+              :employee_number,
+              :title,
+              :hire_date,
+              :office_location,
+              'active'
             )
             """
         ),
@@ -2283,165 +2221,25 @@ def create_user_account(db: Session, actor_user_id: int, payload: AdminCreateUse
             "first_name": payload.first_name.strip(),
             "last_name": payload.last_name.strip(),
             "phone": payload.phone,
+            "role": payload.role,
             "status": payload.status,
             "must_change_password": payload.must_change_password,
             "created_by_user_id": actor_user_id,
             "invited_at": datetime.now(UTC).replace(tzinfo=None),
+            "student_number": student_number if is_student else None,
+            "department_id": payload.department_id if (is_student or is_instructor) else None,
+            "program_id": payload.program_id if is_student else None,
+            "admission_date": (payload.admission_date or date.today()) if is_student else None,
+            "current_semester": payload.current_semester or 1,
+            "employee_number": employee_number if not is_student else None,
+            "title": payload.title,
+            "hire_date": payload.hire_date if is_instructor else None,
+            "office_location": payload.office_location,
         },
     )
     user_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar_one()
-    role_id = db.execute(text("SELECT id FROM roles WHERE code = :role"), {"role": payload.role}).scalar_one()
-
-    db.execute(
-        text(
-            """
-            INSERT INTO user_roles (
-              user_id,
-              role_id,
-              is_primary,
-              assigned_by_user_id,
-              assigned_at
-            ) VALUES (
-              :user_id,
-              :role_id,
-              TRUE,
-              :assigned_by_user_id,
-              :assigned_at
-            )
-            """
-        ),
-        {
-            "user_id": user_id,
-            "role_id": role_id,
-            "assigned_by_user_id": actor_user_id,
-            "assigned_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-    )
-
-    if is_student:
-        db.execute(
-            text(
-                """
-                INSERT INTO student_profiles (
-                  user_id,
-                  student_number,
-                  department_id,
-                  program_id,
-                  admission_date,
-                  current_semester,
-                  cumulative_gpa,
-                  earned_credits,
-                  status
-                ) VALUES (
-                  :user_id,
-                  :student_number,
-                  :department_id,
-                  :program_id,
-                  :admission_date,
-                  :current_semester,
-                  0,
-                  0,
-                  'active'
-                )
-                """
-            ),
-            {
-                "user_id": user_id,
-                "student_number": student_number,
-                "department_id": payload.department_id,
-                "program_id": payload.program_id,
-                "admission_date": payload.admission_date or date.today(),
-                "current_semester": payload.current_semester or 1,
-            },
-        )
-    elif is_instructor:
-        db.execute(
-            text(
-                """
-                INSERT INTO teacher_profiles (
-                  user_id,
-                  employee_number,
-                  department_id,
-                  title,
-                  hire_date,
-                  office_location,
-                  employment_status
-                ) VALUES (
-                  :user_id,
-                  :employee_number,
-                  :department_id,
-                  :title,
-                  :hire_date,
-                  :office_location,
-                  'active'
-                )
-                """
-            ),
-            {
-                "user_id": user_id,
-                "employee_number": employee_number,
-                "department_id": payload.department_id,
-                "title": payload.title,
-                "hire_date": payload.hire_date,
-                "office_location": payload.office_location,
-            },
-        )
-    elif is_staff:
-        db.execute(
-            text(
-                """
-                INSERT INTO admin_profiles (
-                  user_id,
-                  employee_number,
-                  title,
-                  office_location,
-                  employment_status
-                ) VALUES (
-                  :user_id,
-                  :employee_number,
-                  :title,
-                  :office_location,
-                  'active'
-                )
-                """
-            ),
-            {
-                "user_id": user_id,
-                "employee_number": employee_number,
-                "title": payload.title,
-                "office_location": payload.office_location,
-            },
-        )
-    else:
+    if not (is_student or is_instructor or is_staff):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported role for account provisioning.")
-
-    db.execute(
-        text(
-            """
-            INSERT INTO audit_logs (
-              actor_user_id,
-              entity_type,
-              entity_id,
-              action,
-              summary,
-              created_at
-            ) VALUES (
-              :actor_user_id,
-              'users',
-              :entity_id,
-              'create',
-              :summary,
-              :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "entity_id": str(user_id),
-            "summary": f"Created {payload.role} account for {payload.email.lower().strip()}",
-            "created_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-    )
     db.commit()
 
     identity = get_identity_by_user_id(db, user_id)
