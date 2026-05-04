@@ -3,6 +3,8 @@ from sqlalchemy.orm import relationship
 from src.config.database import Base
 
 class Student(Base):
+    """Student profile; status values: active, on_leave, graduated, expelled."""
+
     __tablename__ = "students"
 
     id               = Column(Integer, primary_key=True, index=True)

@@ -4,6 +4,8 @@ from sqlalchemy.orm import relationship
 from src.config.database import Base
 
 class Registration(Base):
+    """Junction between student and offering; status values: active, dropped, completed."""
+
     __tablename__ = "registrations"
 
     id            = Column(Integer, primary_key=True, index=True)

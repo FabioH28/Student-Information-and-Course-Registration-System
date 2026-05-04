@@ -3,6 +3,8 @@ from sqlalchemy.orm import relationship
 from src.config.database import Base
 
 class Course(Base):
+    """Catalog entry; prerequisite_course_id is a self-referential FK, nullable."""
+
     __tablename__ = "courses"
 
     id                     = Column(Integer, primary_key=True, index=True)
