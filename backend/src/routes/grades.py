@@ -15,6 +15,7 @@ from src.utils.security import require_roles
 router = APIRouter(prefix="/grades", tags=["Grades"])
 
 def _calc_letter(total: float) -> str:
+    """Map numeric total to letter grade on a standard 10-point scale."""
     if total >= 93: return "A"
     if total >= 90: return "A-"
     if total >= 87: return "B+"
@@ -29,6 +30,7 @@ def _calc_letter(total: float) -> str:
 
 @router.get("/me", response_model=List[GradeOut])
 def my_grades(current_user: User = Depends(require_roles("student")), db: Session = Depends(get_db)):
+    """Return published grades for the authenticated student."""
     student = db.query(Student).filter(Student.user_id == current_user.id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -37,11 +39,13 @@ def my_grades(current_user: User = Depends(require_roles("student")), db: Sessio
 
 @router.get("/offering/{offering_id}", response_model=List[GradeOut])
 def grades_for_offering(offering_id: int, current_user: User = Depends(require_roles("instructor", "academic_staff", "system_admin")), db: Session = Depends(get_db)):
+    """List all grades for a given offering; visible to instructor and staff."""
     regs = db.query(Registration).filter(Registration.offering_id == offering_id).all()
     return [r.grade for r in regs if r.grade]
 
 @router.put("/offering/{offering_id}/registration/{registration_id}", response_model=GradeOut)
 def upsert_grade(offering_id: int, registration_id: int, body: GradeUpsert, current_user: User = Depends(require_roles("instructor")), db: Session = Depends(get_db)):
+    """Create or update grade components and recompute weighted total."""
     instructor = db.query(Instructor).filter(Instructor.user_id == current_user.id).first()
     if not instructor:
         raise HTTPException(status_code=404, detail="Instructor not found")
@@ -65,6 +69,7 @@ def upsert_grade(offering_id: int, registration_id: int, body: GradeUpsert, curr
     midterm = float(grade.midterm_score or 0)
     assignment = float(grade.assignment_score or 0)
     final = float(grade.final_score or 0)
+    # weights: midterm 30% / assignments 30% / final 40%
     total = round(midterm * 0.30 + assignment * 0.30 + final * 0.40, 2)
     grade.total_score = total
     grade.letter_grade = _calc_letter(total)
@@ -76,6 +81,7 @@ def upsert_grade(offering_id: int, registration_id: int, body: GradeUpsert, curr
 
 @router.post("/publish", status_code=200)
 def publish_grades(body: GradePublish, current_user: User = Depends(require_roles("instructor")), db: Session = Depends(get_db)):
+    """Flip is_published for a batch of registrations owned by this instructor."""
     instructor = db.query(Instructor).filter(Instructor.user_id == current_user.id).first()
     if not instructor:
         raise HTTPException(status_code=404, detail="Instructor not found")
