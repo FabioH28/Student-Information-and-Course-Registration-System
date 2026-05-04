@@ -19,6 +19,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 def _display_name(user: User, db: Session) -> str:
+    """Resolve display name from role profile, fallback to email prefix."""
     if user.full_name:
         return user.full_name
     if user.role == "student":
@@ -34,6 +35,7 @@ def _display_name(user: User, db: Session) -> str:
 
 @router.post("/register", status_code=201)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
+    """Create account and dispatch a 6-digit email verification code."""
     from src.utils.email import send_verification_code
     if db.query(User).filter(User.email == body.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -66,6 +68,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/verify-email")
 def verify_email(body: VerifyEmailRequest, db: Session = Depends(get_db)):
+    """Validate verification code and advance status to pending_approval."""
     user = db.query(User).filter(User.email == body.email).first()
     if not user or user.status != "pending_verification":
         raise HTTPException(status_code=400, detail="Invalid request")
@@ -85,6 +88,7 @@ def verify_email(body: VerifyEmailRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=LoginResponse)
 def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    """Authenticate credentials; return JWT, role, and display metadata."""
     user = db.query(User).filter(User.email == body.email).first()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -109,6 +113,7 @@ def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
 
 @router.post("/change-password")
 def change_password(body: ChangePasswordRequest, request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Update password hash and clear the first-login flag."""
     if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     current_user.password_hash = hash_password(body.new_password)
@@ -120,6 +125,7 @@ def change_password(body: ChangePasswordRequest, request: Request, current_user:
 
 @router.post("/request-reset")
 def request_reset(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Issue a 10-minute reset token; response is generic to prevent enumeration."""
     from src.models.password_reset_token import PasswordResetToken
     from src.utils.email import send_reset_code
     user = db.query(User).filter(User.email == body.email).first()
@@ -141,6 +147,7 @@ def request_reset(body: ResetPasswordRequest, db: Session = Depends(get_db)):
 
 @router.post("/reset-password")
 def reset_password(body: ConfirmResetRequest, db: Session = Depends(get_db)):
+    """Apply a valid reset token and set the new password hash."""
     from src.models.password_reset_token import PasswordResetToken
     records = db.query(PasswordResetToken).filter(
         PasswordResetToken.expires_at > datetime.now(timezone.utc),
