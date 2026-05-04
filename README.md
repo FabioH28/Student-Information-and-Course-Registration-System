@@ -104,6 +104,23 @@ uvicorn src.main:app --reload --port 8000
 API runs at `http://localhost:8000`
 Interactive docs at `http://localhost:8000/docs`
 
+### Environment Variables
+
+Copy `.env.example` to `.env` and fill in:
+
+| Variable | Description |
+|---|---|
+| `DB_HOST` | MySQL host (default `localhost`) |
+| `DB_PORT` | MySQL port (default `3306`) |
+| `DB_NAME` | Database name (`CampusIS`) |
+| `DB_USER` | MySQL user |
+| `DB_PASSWORD` | MySQL password |
+| `SECRET_KEY` | JWT signing secret (`openssl rand -hex 32`) |
+| `SMTP_HOST` | SMTP server for verification/reset emails |
+| `SMTP_PORT` | SMTP port |
+| `SMTP_USER` | SMTP login |
+| `SMTP_PASSWORD` | SMTP credential |
+
 ### 3. Frontend Setup
 
 ```bash
