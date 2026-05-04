@@ -30,8 +30,10 @@ app.include_router(semesters.router)
 
 @app.get("/")
 def root():
+    """Liveness check — confirms the API process is up."""
     return {"message": "CIS API is running"}
 
 @app.get("/health")
 def health():
+    """Health probe used by reverse proxies and container orchestrators."""
     return {"status": "ok"}
