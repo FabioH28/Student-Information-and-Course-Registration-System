@@ -2,6 +2,8 @@
 
 CIS is a full-stack campus information system for a university-style environment. It includes a Vite + React + TypeScript frontend, a FastAPI backend, and a lean MySQL/MariaDB schema with demo data for local development.
 
+Current handoff version: `0.1.0`
+
 ## Tech Stack
 
 - Frontend: React, TypeScript, Vite, Tailwind CSS
@@ -155,6 +157,10 @@ cd backend
 pip install -r requirements-dev.txt
 pytest
 ```
+
+## Coworker Development
+
+Use `CONTRIBUTING.md` for branch, test, database, pull request, and release guidelines. Use `CHANGELOG.md` to track versioned changes before publishing a GitHub release.
 
 ## GitHub Notes
 
