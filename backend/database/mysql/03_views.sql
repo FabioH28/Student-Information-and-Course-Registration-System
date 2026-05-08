@@ -62,7 +62,7 @@ JOIN permissions p
     OR (r.code = 'Academic Staff' AND p.code IN ('profile.view.self','profile.edit.self','academic.dashboard.view','academic.records.manage','academic.grades.manage','academic.attendance.manage','academic.courses.manage','academic.terms.manage','academic.registrations.manage','academic.schedule.manage','academic.exams.manage','communications.dashboard.view','announcements.manage','events.manage','announcements.media.upload','notifications.send','reports.view'))
     OR (r.code = 'Finance Staff' AND p.code IN ('profile.view.self','profile.edit.self','finance.dashboard.view','finance.records.manage','notifications.send','reports.view'))
     OR (r.code = 'Communication Staff' AND p.code IN ('profile.view.self','profile.edit.self','communications.dashboard.view','announcements.manage','events.manage','announcements.media.upload','notifications.send','reports.view'))
-    OR (r.code = 'System Admin' AND p.code IN ('profile.view.self','profile.edit.self','system.overview.view','academic.dashboard.view','academic.records.manage','academic.courses.manage','academic.terms.manage','academic.registrations.manage','academic.schedule.manage','academic.exams.manage','finance.dashboard.view','finance.records.manage','communications.dashboard.view','announcements.manage','events.manage','announcements.media.upload','notifications.send','reports.view','users.manage','roles.manage','settings.manage'))
+    OR (r.code = 'System Admin' AND p.code IN ('profile.view.self','profile.edit.self','system.overview.view','academic.dashboard.view','academic.records.manage','academic.grades.manage','academic.attendance.manage','academic.courses.manage','academic.terms.manage','academic.registrations.manage','academic.schedule.manage','academic.exams.manage','finance.dashboard.view','finance.records.manage','communications.dashboard.view','announcements.manage','events.manage','announcements.media.upload','notifications.send','reports.view','users.manage','roles.manage','settings.manage'))
   );
 
 CREATE OR REPLACE VIEW departments AS
@@ -147,16 +147,16 @@ GROUP BY co.building_id, co.building_code, co.building_name;
 CREATE OR REPLACE VIEW rooms AS
 SELECT
   co.room_id AS id,
-  COALESCE(co.building_id, 1) AS building_id,
-  COALESCE(co.room_code, CONCAT('ROOM-', co.room_id)) AS code,
-  COALESCE(co.room_name, co.location_name, co.schedule_notes, 'Campus Room') AS name,
+  COALESCE(MIN(co.building_id), 1) AS building_id,
+  COALESCE(MIN(co.room_code), CONCAT('ROOM-', co.room_id)) AS code,
+  COALESCE(MIN(co.room_name), MIN(co.location_name), MIN(co.schedule_notes), 'Campus Room') AS name,
   MAX(co.capacity) AS capacity,
-  COALESCE(co.room_type, 'lecture') AS room_type,
+  COALESCE(MIN(co.room_type), 'lecture') AS room_type,
   MIN(co.created_at) AS created_at,
   MAX(co.updated_at) AS updated_at
 FROM course_offerings co
 WHERE co.room_id IS NOT NULL
-GROUP BY co.room_id, co.building_id, co.room_code, co.room_name, co.location_name, co.schedule_notes, co.room_type;
+GROUP BY co.room_id;
 
 CREATE OR REPLACE VIEW course_meetings AS
 SELECT

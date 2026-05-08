@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.rbac import ROLE_ACADEMIC_STAFF
+from app.core.rbac import ROLE_ACADEMIC_STAFF, ROLE_SYSTEM_ADMIN
 from app.schemas.teacher import (
     AttendanceRecordBulkRequest,
     AttendanceSessionCreateRequest,
@@ -15,7 +15,7 @@ from app.schemas.teacher import (
 
 
 def _can_manage_all_academic(actor_roles: list[str] | None = None) -> bool:
-    return actor_roles is not None and ROLE_ACADEMIC_STAFF in actor_roles
+    return actor_roles is not None and any(role in actor_roles for role in (ROLE_ACADEMIC_STAFF, ROLE_SYSTEM_ADMIN))
 
 
 def _get_teacher_profile(db: Session, user_id: int) -> dict:
@@ -1062,6 +1062,7 @@ def get_teacher_inbox(db: Session, user_id: int) -> dict:
             FROM notification_recipients nr
             JOIN notifications n ON n.id = nr.notification_id
             WHERE nr.user_id = :user_id
+              AND n.category != 'audit'
             ORDER BY n.created_at DESC, nr.id DESC
             LIMIT 100
             """

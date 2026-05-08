@@ -33,12 +33,14 @@ const StudentFinance = lazy(() => import("./pages/student/StudentFinance"));
 const StudentClubs = lazy(() => import("./pages/student/StudentClubs"));
 const Chatbot = lazy(() => import("./pages/student/Chatbot"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
 const StudentManagement = lazy(() => import("./pages/admin/StudentManagement"));
 const TeacherStaffManagement = lazy(() => import("./pages/admin/TeacherStaffManagement"));
 const CourseManagement = lazy(() => import("./pages/admin/CourseManagement"));
 const SemesterManagement = lazy(() => import("./pages/admin/SemesterManagement"));
 const RegistrationOverview = lazy(() => import("./pages/admin/RegistrationOverview"));
 const AdminFinance = lazy(() => import("./pages/admin/AdminFinance"));
+const FinanceDashboard = lazy(() => import("./pages/finance/FinanceDashboard"));
 const ClubManagement = lazy(() => import("./pages/admin/ClubManagement"));
 const NewsManagement = lazy(() => import("./pages/admin/NewsManagement"));
 const Analytics = lazy(() => import("./pages/admin/Analytics"));
@@ -51,6 +53,8 @@ const TeacherGradebook = lazy(() => import("./pages/teacher/TeacherGradebook"));
 const TeacherInbox = lazy(() => import("./pages/teacher/TeacherInbox"));
 const InstructorTimetable = lazy(() => import("./pages/instructor/InstructorTimetable"));
 const InstructorAnnouncements = lazy(() => import("./pages/instructor/InstructorAnnouncements"));
+const CommunicationsDashboard = lazy(() => import("./pages/communications/CommunicationsDashboard"));
+const StaffInbox = lazy(() => import("./pages/staff/StaffInbox"));
 const UserProfilePage = lazy(() => import("./pages/profile/UserProfilePage"));
 const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -129,22 +133,26 @@ const App = () => (
                     <Route path="attendance" element={<TeacherAttendance />} />
                     <Route path="grades" element={<TeacherGradebook />} />
                     <Route path="news" element={<NewsManagement />} />
+                    <Route path="inbox" element={<StaffInbox />} />
                   </Route>
                 </Route>
 
                 <Route element={<ProtectedRoute allowedRoles={[ROLE_FINANCE_STAFF]} />}>
                   <Route path="/finance" element={<WorkspaceLayout role={ROLE_FINANCE_STAFF} />}>
-                    <Route index element={<AdminFinance />} />
+                    <Route index element={<FinanceDashboard />} />
                     <Route path="profile" element={<UserProfilePage />} />
+                    <Route path="records" element={<AdminFinance />} />
+                    <Route path="inbox" element={<StaffInbox />} />
                   </Route>
                 </Route>
 
                 <Route element={<ProtectedRoute allowedRoles={[ROLE_COMMUNICATION_STAFF]} />}>
                   <Route path="/communications" element={<WorkspaceLayout role={ROLE_COMMUNICATION_STAFF} />}>
-                    <Route index element={<NewsManagement />} />
+                    <Route index element={<CommunicationsDashboard />} />
                     <Route path="profile" element={<UserProfilePage />} />
                     <Route path="news" element={<NewsManagement />} />
                     <Route path="clubs" element={<ClubManagement />} />
+                    <Route path="inbox" element={<StaffInbox />} />
                   </Route>
                 </Route>
 
@@ -154,6 +162,15 @@ const App = () => (
                     <Route path="profile" element={<UserProfilePage />} />
                     <Route path="students" element={<StudentManagement />} />
                     <Route path="staff" element={<TeacherStaffManagement />} />
+                    <Route path="courses" element={<CourseManagement />} />
+                    <Route path="semesters" element={<SemesterManagement />} />
+                    <Route path="registrations" element={<RegistrationOverview />} />
+                    <Route path="attendance" element={<TeacherAttendance />} />
+                    <Route path="grades" element={<TeacherGradebook />} />
+                    <Route path="finance" element={<AdminFinance />} />
+                    <Route path="news" element={<NewsManagement />} />
+                    <Route path="clubs" element={<ClubManagement />} />
+                    <Route path="messages" element={<AdminMessages />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="settings" element={<AdminSettings />} />
                   </Route>

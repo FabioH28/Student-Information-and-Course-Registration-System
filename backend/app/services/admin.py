@@ -46,7 +46,35 @@ def _create_audit_log(
     action: str,
     summary: str,
 ) -> None:
-    return
+    if actor_user_id is None:
+        return
+    try:
+        db.execute(
+            text(
+                """
+                INSERT INTO notifications (
+                  user_id, category, severity, title, message,
+                  source_entity_type, source_entity_id,
+                  created_by_user_id, delivered_at
+                ) VALUES (
+                  :user_id, 'audit', 'info', :title, :message,
+                  :source_entity_type, :source_entity_id,
+                  :created_by_user_id, :delivered_at
+                )
+                """
+            ),
+            {
+                "user_id": actor_user_id,
+                "title": summary,
+                "message": f"{action.replace('_', ' ').title()} on {entity_type} #{entity_id}",
+                "source_entity_type": entity_type,
+                "source_entity_id": int(entity_id) if str(entity_id).isdigit() else None,
+                "created_by_user_id": actor_user_id,
+                "delivered_at": datetime.now(UTC).replace(tzinfo=None),
+            },
+        )
+    except Exception:
+        pass
 
 
 def _get_admin_profile_id(db: Session, user_id: int) -> int:
@@ -352,14 +380,15 @@ def get_admin_reference_data(db: Session) -> dict:
             """
             SELECT
               r.id,
-              r.code,
-              COALESCE(r.name, r.code) AS name,
-              r.capacity,
-              r.room_type,
-              b.name AS building_name
+              MIN(r.code) AS code,
+              MIN(COALESCE(r.name, r.code)) AS name,
+              MAX(r.capacity) AS capacity,
+              MIN(r.room_type) AS room_type,
+              MIN(b.name) AS building_name
             FROM rooms r
-            JOIN buildings b ON b.id = r.building_id
-            ORDER BY b.name ASC, r.code ASC
+            LEFT JOIN buildings b ON b.id = r.building_id
+            GROUP BY r.id
+            ORDER BY building_name ASC, code ASC
             """
         )
     ).mappings().all()
@@ -1252,7 +1281,7 @@ def _ensure_room_exists(db: Session, room_id: int | None) -> None:
         return
 
     exists = db.execute(
-        text("SELECT id FROM rooms WHERE id = :room_id"),
+        text("SELECT 1 FROM rooms WHERE id = :room_id LIMIT 1"),
         {"room_id": room_id},
     ).scalar_one_or_none()
     if exists is None:

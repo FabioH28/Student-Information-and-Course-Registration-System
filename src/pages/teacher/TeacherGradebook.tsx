@@ -113,9 +113,9 @@ export default function TeacherGradebook() {
     queryFn: () => apiGet<TeacherStudentsResponse>(`${apiBase}/students`),
   });
 
-  const offerings = gradebookQuery.data?.offerings ?? [];
-  const components = gradebookQuery.data?.components ?? [];
-  const students = studentsQuery.data?.items ?? [];
+  const offerings = useMemo(() => gradebookQuery.data?.offerings ?? [], [gradebookQuery.data?.offerings]);
+  const components = useMemo(() => gradebookQuery.data?.components ?? [], [gradebookQuery.data?.components]);
+  const students = useMemo(() => studentsQuery.data?.items ?? [], [studentsQuery.data?.items]);
 
   useEffect(() => {
     if (componentDialogOpen && !componentForm.offering_id && offerings.length > 0) {

@@ -1,8 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { BellRing, Mail, Megaphone, MessageSquare, Pencil, Reply } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { ComposeDialog } from "@/components/messages/ComposeDialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/app/DataState";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPut } from "@/lib/api";
 import { formatRelativeDateTime, titleize } from "@/lib/formatters";
 
 interface TeacherInboxResponse {
@@ -20,73 +26,193 @@ interface TeacherInboxResponse {
   }>;
 }
 
+interface MessagesInboxResponse {
+  total: number;
+  unread: number;
+  items: Array<{
+    id: number;
+    sender_id: number;
+    sender_name: string;
+    sender_role: string;
+    subject: string;
+    body: string;
+    parent_id: number | null;
+    is_broadcast: number;
+    sent_at: string;
+    read_at: string | null;
+  }>;
+}
+
 function getSeverityVariant(severity: string) {
-  if (severity === "danger") {
-    return "danger" as const;
-  }
-  if (severity === "warning") {
-    return "warning" as const;
-  }
-  if (severity === "success") {
-    return "success" as const;
-  }
+  if (severity === "danger") return "danger" as const;
+  if (severity === "warning") return "warning" as const;
+  if (severity === "success") return "success" as const;
   return "info" as const;
 }
 
 export default function TeacherInbox() {
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<"notifications" | "messages">("notifications");
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ id: number; subject: string; senderId: number } | null>(null);
+
   const inboxQuery = useQuery({
     queryKey: ["instructor", "inbox"],
     queryFn: () => apiGet<TeacherInboxResponse>("/instructors/me/inbox"),
   });
 
-  if (inboxQuery.isLoading) {
-    return <LoadingState lines={5} />;
-  }
+  const messagesQuery = useQuery({
+    queryKey: ["messages", "inbox"],
+    queryFn: () => apiGet<MessagesInboxResponse>("/messages/inbox"),
+  });
 
+  const markMsgReadMutation = useMutation({
+    mutationFn: (id: number) => apiPut(`/messages/${id}/read`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages", "inbox"] }),
+  });
+
+  if (inboxQuery.isLoading || messagesQuery.isLoading) return <LoadingState lines={5} />;
   if (inboxQuery.isError) {
     return (
       <ErrorState
-        description={inboxQuery.error instanceof Error ? inboxQuery.error.message : "Instructor inbox could not be loaded."}
+        description={inboxQuery.error instanceof Error ? inboxQuery.error.message : "Inbox could not be loaded."}
         onRetry={() => void inboxQuery.refetch()}
       />
     );
   }
 
-  const items = inboxQuery.data?.items ?? [];
-
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="Inbox is clear"
-        description="Instructor notifications will land here once the institution starts issuing workflow updates, reminders, and alerts."
-      />
-    );
-  }
+  const notifications = inboxQuery.data?.items ?? [];
+  const messages = messagesQuery.data?.items ?? [];
+  const unreadMessages = messagesQuery.data?.unread ?? 0;
 
   return (
-    <div className="space-y-4">
-      {items.map((item) => (
-        <div key={item.recipient_id} className="rounded-xl border bg-card p-5 shadow-card">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
-                {!item.read_at ? <StatusBadge variant="warning">Unread</StatusBadge> : null}
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.message}</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <StatusBadge variant={getSeverityVariant(item.severity)}>{titleize(item.severity)}</StatusBadge>
-              <StatusBadge variant="default">{titleize(item.category)}</StatusBadge>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <PageHeader title="Inbox" description="Notifications and direct messages">
+        <Button
+          size="sm"
+          className="gradient-primary text-primary-foreground hover:opacity-90"
+          onClick={() => { setReplyTo(null); setComposeOpen(true); }}
+        >
+          <Pencil className="mr-2 h-4 w-4" /> New Message
+        </Button>
+      </PageHeader>
 
-          <div className="mt-4 flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-            <span>{formatRelativeDateTime(item.created_at)}</span>
-            {item.action_label && item.action_url ? <span>{item.action_label} available once that workflow is enabled</span> : null}
-          </div>
-        </div>
-      ))}
+      <div className="flex gap-1 rounded-xl border bg-muted/30 p-1">
+        <button
+          type="button"
+          onClick={() => setTab("notifications")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "notifications" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <BellRing className="h-4 w-4" />
+          Notifications
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("messages")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "messages" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          Messages
+          {unreadMessages > 0 && (
+            <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">{unreadMessages}</span>
+          )}
+        </button>
+      </div>
+
+      {tab === "notifications" && (
+        <>
+          {notifications.length === 0 ? (
+            <EmptyState
+              title="Inbox is clear"
+              description="Instructor notifications will appear here once the institution issues updates and alerts."
+            />
+          ) : (
+            <div className="space-y-4">
+              {notifications.map((item) => (
+                <div key={item.recipient_id} className="rounded-xl border bg-card p-5 shadow-card">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
+                        {!item.read_at ? <StatusBadge variant="warning">Unread</StatusBadge> : null}
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.message}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <StatusBadge variant={getSeverityVariant(item.severity)}>{titleize(item.severity)}</StatusBadge>
+                      <StatusBadge variant="default">{titleize(item.category)}</StatusBadge>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                    <span>{formatRelativeDateTime(item.created_at)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === "messages" && (
+        <>
+          {messages.length === 0 ? (
+            <EmptyState
+              title="No messages yet"
+              description="Use New Message to contact your students or the administration."
+            />
+          ) : (
+            <div className="space-y-3">
+              {messages.map((msg, index) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 }}
+                  className={`rounded-xl border bg-card p-4 shadow-card transition-colors hover:bg-muted/30 ${msg.read_at === null && !msg.is_broadcast ? "border-l-4 border-l-primary" : ""}`}
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        {msg.is_broadcast ? <Megaphone className="h-4 w-4 shrink-0 text-warning" /> : <Mail className="h-4 w-4 shrink-0 text-primary" />}
+                        <p className="truncate text-sm font-semibold text-foreground">{msg.subject}</p>
+                        {msg.read_at === null && !msg.is_broadcast && <StatusBadge variant="warning">Unread</StatusBadge>}
+                        {msg.is_broadcast && <StatusBadge variant="info">Broadcast</StatusBadge>}
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        From {msg.sender_name} ({msg.sender_role}) · {formatRelativeDateTime(msg.sent_at)}
+                      </p>
+                      <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{msg.body}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {msg.read_at === null && !msg.is_broadcast && (
+                      <Button variant="outline" size="sm" onClick={() => markMsgReadMutation.mutate(msg.id)} disabled={markMsgReadMutation.isPending}>Mark as read</Button>
+                    )}
+                    {!msg.is_broadcast && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setReplyTo({ id: msg.id, subject: `Re: ${msg.subject}`, senderId: msg.sender_id }); setComposeOpen(true); }}
+                      >
+                        <Reply className="mr-1.5 h-3.5 w-3.5" /> Reply
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <ComposeDialog
+        open={composeOpen}
+        onOpenChange={(open) => { setComposeOpen(open); if (!open) setReplyTo(null); }}
+        defaultRecipientId={replyTo?.senderId}
+        defaultSubject={replyTo?.subject}
+        parentId={replyTo?.id}
+        invalidateKeys={[["messages", "inbox"]]}
+      />
     </div>
   );
 }

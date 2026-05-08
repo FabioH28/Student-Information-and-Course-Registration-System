@@ -22,6 +22,40 @@ interface AnalyticsResponse {
   }>;
 }
 
+function csvCell(value: string | number) {
+  const text = String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadAnalyticsReport(analytics: AnalyticsResponse) {
+  const rows = [
+    ["Section", "Name", "Value"],
+    ["Metric", "Enrollment Growth", `${analytics.metrics.enrollment_growth.toFixed(1)}%`],
+    ["Metric", "Average GPA", analytics.metrics.average_gpa.toFixed(2)],
+    ["Metric", "Course Fill Rate", `${analytics.metrics.fill_rate.toFixed(1)}%`],
+    ["Metric", "At-Risk Rate", `${analytics.metrics.at_risk_rate.toFixed(1)}%`],
+    [],
+    ["Department", "Students", "Average GPA", "At-Risk %"],
+    ...analytics.department_breakdown.map((department) => [
+      department.department_name,
+      department.student_count,
+      Number(department.average_gpa || 0).toFixed(2),
+      `${Number(department.at_risk_percentage || 0).toFixed(1)}%`,
+    ]),
+  ];
+
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `cis-system-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function Analytics() {
   const analyticsQuery = useQuery({
     queryKey: ["system-admin", "analytics"],
@@ -80,7 +114,7 @@ export default function Analytics() {
   return (
     <div className="space-y-6">
       <PageHeader title="System Reports" description="Comprehensive academic insights and operational trend data">
-        <Button variant="outline" size="sm" disabled>
+        <Button variant="outline" size="sm" onClick={() => downloadAnalyticsReport(analytics)}>
           <Download className="mr-2 h-4 w-4" /> Export Report
         </Button>
       </PageHeader>

@@ -105,8 +105,8 @@ export default function TeacherAttendance() {
     queryFn: () => apiGet<TeacherStudentsResponse>(`${apiBase}/students`),
   });
 
-  const offerings = attendanceQuery.data?.offerings ?? [];
-  const rosterItems = rosterQuery.data?.items ?? [];
+  const offerings = useMemo(() => attendanceQuery.data?.offerings ?? [], [attendanceQuery.data?.offerings]);
+  const rosterItems = useMemo(() => rosterQuery.data?.items ?? [], [rosterQuery.data?.items]);
 
   useEffect(() => {
     if (!dialogOpen) {

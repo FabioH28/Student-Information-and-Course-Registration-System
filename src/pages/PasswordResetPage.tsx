@@ -74,8 +74,17 @@ export default function PasswordResetPage() {
         </div>
 
         {!hasToken ? (
-          <div className="rounded-xl border border-warning/20 bg-warning/5 p-4 text-sm text-foreground">
-            This reset link is missing a valid token. Go back to the login page and request a fresh password reset.
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border bg-muted/30 p-5">
+              <p className="text-sm font-semibold text-foreground">Password resets are handled by your System Administrator.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Contact your System Admin and ask them to reset your password from the Staff Management panel.
+                You will receive a temporary password and be prompted to choose a new one on first sign-in.
+              </p>
+            </div>
+            <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/", { replace: true })}>
+              Back to Sign In
+            </Button>
           </div>
         ) : (
           <form

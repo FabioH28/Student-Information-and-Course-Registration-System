@@ -1,0 +1,525 @@
+// CIS – Campus Information System
+// Paste this at https://dbdiagram.io  →  instant visual ERD
+// 22 physical tables · 38 FK relationships
+
+// ─── IDENTITY & SECURITY ─────────────────────────────────────────────────────
+
+Table programs {
+  id               bigint    [pk, increment]
+  department_id    bigint    [not null]
+  department_code  varchar(20)
+  department_name  varchar(150)
+  code             varchar(20)  [unique, not null]
+  name             varchar(150) [not null]
+  degree_level     enum('certificate','diploma','bachelor','master','phd') [not null, default: 'bachelor']
+  duration_semesters smallint  [not null, default: 8]
+  total_credits_required smallint [not null, default: 120]
+  status           enum('active','inactive') [not null, default: 'active']
+  created_at       timestamp  [default: `CURRENT_TIMESTAMP`]
+  updated_at       timestamp
+}
+
+Table users {
+  id                 bigint  [pk, increment]
+  email              varchar(254) [unique, not null]
+  password_hash      varchar(255) [not null]
+  first_name         varchar(100) [not null]
+  last_name          varchar(100) [not null]
+  phone              varchar(30)
+  role               enum('Student','Instructor','Academic Staff','Finance Staff','Communication Staff','System Admin') [not null]
+  status             enum('pending','active','suspended','disabled') [not null, default: 'active']
+  must_change_password boolean [not null, default: false]
+  last_login_at      datetime
+  failed_login_count int      [not null, default: 0]
+  deleted_at         datetime
+  account_origin     enum('admin_provisioned','migration','api_seed') [not null, default: 'admin_provisioned']
+  created_by_user_id bigint
+
+  // Student fields
+  student_number     varchar(30)  [unique]
+  program_id         bigint
+  date_of_birth      date
+  gender             enum('male','female','other','prefer_not_to_say')
+  admission_date     date
+  current_semester   smallint     [not null, default: 1]
+  cumulative_gpa     decimal(4,2) [not null, default: 0.00]
+  earned_credits     smallint     [not null, default: 0]
+  academic_status    enum('active','on_leave','graduated','suspended','withdrawn','probation') [not null, default: 'active']
+
+  // Staff/Instructor fields
+  employee_number    varchar(30)  [unique]
+  title              varchar(100)
+  hire_date          date
+  employment_status  enum('active','on_leave','terminated','retired') [not null, default: 'active']
+  specialization     varchar(255)
+  office_location    varchar(100)
+
+  created_at  timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at  timestamp
+}
+
+Table auth_tokens {
+  id          bigint    [pk, increment]
+  user_id     bigint    [not null]
+  token_type  enum('refresh','password_reset') [not null]
+  token_hash  char(64)  [unique, not null]
+  expires_at  datetime  [not null]
+  used_at     datetime
+  revoked_at  datetime
+  created_at  timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ─── ACADEMIC STRUCTURE ──────────────────────────────────────────────────────
+
+Table academic_terms {
+  id                     bigint    [pk, increment]
+  code                   varchar(30) [unique, not null]
+  name                   varchar(100) [not null]
+  academic_year_start    year     [not null]
+  academic_year_end      year     [not null]
+  term_number            tinyint  [not null]
+  start_date             date     [not null]
+  end_date               date     [not null]
+  registration_start_at  datetime [not null]
+  registration_end_at    datetime [not null]
+  status                 enum('planning','registration','active','completed','archived') [not null, default: 'planning']
+  is_current             boolean  [not null, default: false]
+  created_at             timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at             timestamp
+}
+
+Table courses {
+  id                      bigint    [pk, increment]
+  program_id              bigint
+  department_id           bigint    [not null]
+  department_code         varchar(20)
+  department_name         varchar(150)
+  code                    varchar(30) [unique, not null]
+  title                   varchar(180) [not null]
+  description             text
+  credit_hours            tinyint  [not null]
+  ects_credits            decimal(4,1)
+  recommended_term_number tinyint
+  level_number            smallint [not null]
+  course_type             enum('core','elective','lab','seminar','project') [not null, default: 'core']
+  requirement_type        enum('core','elective','optional') [not null, default: 'core']
+  grading_scheme          enum('letter','pass_fail') [not null, default: 'letter']
+  prerequisite_course_id  bigint
+  is_active               boolean  [not null, default: true]
+  created_at              timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at              timestamp
+}
+
+Table course_offerings {
+  id                       bigint    [pk, increment]
+  course_id                bigint    [not null]
+  academic_term_id         bigint    [not null]
+  teacher_id               bigint
+  room_code                varchar(30)
+  room_name                varchar(100)
+  room_type                enum('lecture','lab','seminar','office','online')
+  building_code            varchar(20)
+  building_name            varchar(100)
+  location_name            varchar(150)
+  section_code             varchar(10) [not null]
+  delivery_mode            enum('onsite','online','hybrid') [not null, default: 'onsite']
+  capacity                 smallint [not null, default: 0]
+  waitlist_capacity        smallint [not null, default: 0]
+  status                   enum('draft','open','closed','in_progress','completed','cancelled') [not null, default: 'draft']
+  registration_opens_at    datetime
+  registration_closes_at   datetime
+  meeting_day_of_week      enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+  meeting_start_time       time
+  meeting_end_time         time
+  meeting_type             enum('lecture','lab','tutorial','exam','office_hour') [not null, default: 'lecture']
+  created_by_user_id       bigint
+  created_at               timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at               timestamp
+
+  indexes {
+    (course_id, academic_term_id, section_code) [unique]
+  }
+}
+
+// ─── ENROLLMENT & GRADES ─────────────────────────────────────────────────────
+
+Table enrollments {
+  id                              bigint    [pk, increment]
+  student_id                      bigint    [not null]
+  course_offering_id              bigint    [not null]
+  status                          enum('pending','enrolled','waitlisted','dropped','withdrawn','completed','failed') [not null, default: 'pending']
+  registered_at                   datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  approved_at                     datetime
+  dropped_at                      datetime
+  completed_at                    datetime
+  final_numeric_grade             decimal(5,2)
+  final_letter_grade              varchar(5)
+  grade_points                    decimal(3,2)
+  final_grade_status              enum('draft','published','revised') [not null, default: 'draft']
+  final_grade_approved_by_teacher_id bigint
+  created_by_user_id              bigint
+  created_at                      timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at                      timestamp
+
+  indexes {
+    (student_id, course_offering_id) [unique]
+  }
+}
+
+Table grade_components {
+  id                  bigint    [pk, increment]
+  course_offering_id  bigint    [not null]
+  name                varchar(100) [not null]
+  component_type      enum('assignment','quiz','midterm','final','project','lab','participation','attendance','custom') [not null, default: 'assignment']
+  max_points          decimal(8,2) [not null, default: 100.00]
+  weight_percentage   decimal(5,2) [not null, default: 0.00]
+  due_at              datetime
+  sort_order          smallint [not null, default: 1]
+  is_published        boolean  [not null, default: false]
+  created_at          timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at          timestamp
+
+  indexes {
+    (course_offering_id, name) [unique]
+  }
+}
+
+Table grade_records {
+  id                    bigint    [pk, increment]
+  grade_component_id    bigint    [not null]
+  student_id            bigint    [not null]
+  score_awarded         decimal(8,2)
+  percentage            decimal(5,2)
+  letter_grade          varchar(5)
+  remarks               varchar(255)
+  graded_by_teacher_id  bigint
+  graded_at             datetime
+  published_at          datetime
+  created_at            timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at            timestamp
+
+  indexes {
+    (grade_component_id, student_id) [unique]
+  }
+}
+
+// ─── ATTENDANCE ───────────────────────────────────────────────────────────────
+
+Table attendance_sessions {
+  id                      bigint    [pk, increment]
+  course_offering_id      bigint    [not null]
+  session_date            date      [not null]
+  start_time              time
+  end_time                time
+  topic                   varchar(150)
+  status                  enum('scheduled','completed','cancelled') [not null, default: 'completed']
+  created_by_teacher_id   bigint
+  created_at              timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at              timestamp
+}
+
+Table attendance_records {
+  id                      bigint    [pk, increment]
+  attendance_session_id   bigint    [not null]
+  student_id              bigint    [not null]
+  status                  enum('present','absent','late','excused') [not null]
+  remarks                 varchar(255)
+  recorded_by_teacher_id  bigint
+  recorded_at             datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  created_at              timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at              timestamp
+
+  indexes {
+    (attendance_session_id, student_id) [unique]
+  }
+}
+
+// ─── FINANCE ─────────────────────────────────────────────────────────────────
+
+Table student_invoices {
+  id                   bigint    [pk, increment]
+  student_id           bigint    [not null]
+  academic_term_id     bigint
+  invoice_number       varchar(40) [unique, not null]
+  issue_date           date      [not null]
+  due_date             date      [not null]
+  currency             char(3)   [not null, default: 'USD']
+  description          varchar(255)
+  subtotal_amount      decimal(10,2) [not null, default: 0.00]
+  discount_amount      decimal(10,2) [not null, default: 0.00]
+  tax_amount           decimal(10,2) [not null, default: 0.00]
+  total_amount         decimal(10,2) [not null, default: 0.00]
+  balance_amount       decimal(10,2) [not null, default: 0.00]
+  status               enum('draft','issued','partially_paid','paid','overdue','void') [not null, default: 'issued']
+  notes                varchar(255)
+  created_by_admin_id  bigint
+  created_at           timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at           timestamp
+}
+
+Table payments {
+  id                    bigint    [pk, increment]
+  student_id            bigint    [not null]
+  invoice_id            bigint
+  reference_number      varchar(60) [unique, not null]
+  payment_method        enum('cash','card','bank_transfer','online') [not null]
+  amount                decimal(10,2) [not null]
+  currency              char(3)   [not null, default: 'USD']
+  paid_at               datetime  [not null]
+  status                enum('pending','confirmed','failed','refunded') [not null, default: 'confirmed']
+  received_by_admin_id  bigint
+  notes                 varchar(255)
+  created_at            timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at            timestamp
+}
+
+Table financial_holds {
+  id                    bigint    [pk, increment]
+  student_id            bigint    [not null]
+  hold_type             enum('finance','disciplinary','academic','administrative') [not null, default: 'finance']
+  reason                varchar(255) [not null]
+  status                enum('active','released') [not null, default: 'active']
+  placed_at             datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  released_at           datetime
+  placed_by_admin_id    bigint
+  released_by_admin_id  bigint
+  created_at            timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at            timestamp
+}
+
+// ─── CLUBS & EVENTS ──────────────────────────────────────────────────────────
+
+Table clubs {
+  id                    bigint    [pk, increment]
+  category_code         varchar(30) [not null, default: 'ACADEMIC']
+  category_name         varchar(100) [not null, default: 'Academic']
+  code                  varchar(30) [unique, not null]
+  name                  varchar(150) [not null]
+  slug                  varchar(180) [unique, not null]
+  description           text
+  advisor_teacher_id    bigint
+  managed_by_admin_id   bigint
+  join_mode             enum('open','request','invite_only','waitlist') [not null, default: 'open']
+  status                enum('draft','active','recruiting','inactive','archived') [not null, default: 'active']
+  capacity              int
+  meeting_day_of_week   enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+  meeting_start_time    time
+  meeting_end_time      time
+  meeting_location      varchar(150)
+  contact_email         varchar(254)
+  created_at            timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at            timestamp
+}
+
+Table club_memberships {
+  id                    bigint    [pk, increment]
+  club_id               bigint    [not null]
+  student_id            bigint    [not null]
+  member_role           varchar(50) [not null, default: 'member']
+  status                enum('active','pending','waitlisted','rejected','inactive') [not null, default: 'active']
+  submitted_at          datetime
+  joined_at             datetime
+  left_at               datetime
+  approved_at           datetime
+  approved_by_admin_id  bigint
+  reviewed_by_admin_id  bigint
+  notes                 varchar(255)
+  created_at            timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at            timestamp
+
+  indexes {
+    (club_id, student_id) [unique]
+  }
+}
+
+Table campus_events {
+  id                    bigint    [pk, increment]
+  club_id               bigint
+  title                 varchar(180) [unique, not null]
+  description           text
+  organizer_name        varchar(150) [not null]
+  event_type            varchar(80)  [not null]
+  location_name         varchar(150) [not null]
+  delivery_mode         enum('onsite','online','hybrid') [not null, default: 'onsite']
+  audience_scope        varchar(100) [not null, default: 'all']
+  starts_at             datetime  [not null]
+  ends_at               datetime  [not null]
+  registration_required boolean   [not null, default: false]
+  capacity              int
+  status                enum('draft','scheduled','open','internal','cancelled','completed') [not null, default: 'draft']
+  managed_by_user_id    bigint
+  created_at            timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at            timestamp
+}
+
+Table campus_event_registrations {
+  id               bigint    [pk, increment]
+  campus_event_id  bigint    [not null]
+  user_id          bigint    [not null]
+  status           enum('registered','cancelled','attended','no_show') [not null, default: 'registered']
+  notes            varchar(255)
+  registered_at    datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at       timestamp
+
+  indexes {
+    (campus_event_id, user_id) [unique]
+  }
+}
+
+// ─── COMMUNICATION ────────────────────────────────────────────────────────────
+
+Table news_posts {
+  id                  bigint    [pk, increment]
+  post_type           enum('announcement','notice','update','feature') [not null, default: 'announcement']
+  title               varchar(180) [unique, not null]
+  summary             varchar(500) [not null]
+  body                text
+  priority            enum('notice','update','important','urgent') [not null, default: 'notice']
+  status              enum('draft','scheduled','published','archived') [not null, default: 'draft']
+  featured            boolean   [not null, default: false]
+  audience_scope      varchar(100) [not null, default: 'all']
+  visible_from        datetime
+  visible_until       datetime
+  published_at        datetime
+  created_by_user_id  bigint
+  updated_by_user_id  bigint
+  created_at          timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at          timestamp
+}
+
+Table notifications {
+  id                  bigint    [pk, increment]
+  user_id             bigint    [not null]
+  category            varchar(50) [not null]
+  severity            enum('info','success','warning','danger') [not null, default: 'info']
+  title               varchar(150) [not null]
+  message             varchar(600) [not null]
+  action_label        varchar(80)
+  action_url          varchar(255)
+  source_entity_type  varchar(80)
+  source_entity_id    bigint
+  created_by_user_id  bigint
+  delivered_at        datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  read_at             datetime
+  archived_at         datetime
+  created_at          timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table messages {
+  id            bigint    [pk, increment]
+  sender_id     bigint    [not null]
+  recipient_id  bigint    [note: 'NULL when is_broadcast = 1']
+  subject       varchar(200) [not null, default: '(no subject)']
+  body          text      [not null]
+  parent_id     bigint    [note: 'original message id for replies']
+  is_broadcast  tinyint(1) [not null, default: 0]
+  sent_at       datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  read_at       datetime
+}
+
+// ─── AI ASSISTANT ─────────────────────────────────────────────────────────────
+
+Table ai_chat_messages {
+  id               bigint    [pk, increment]
+  conversation_id  bigint    [not null]
+  student_id       bigint    [not null]
+  title            varchar(120) [not null, default: 'Academic assistant']
+  session_status   enum('active','archived') [not null, default: 'active']
+  started_at       datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  last_message_at  datetime  [not null, default: `CURRENT_TIMESTAMP`]
+  sender_type      enum('student','assistant','system') [not null]
+  message_text     text      [not null]
+  metadata_json    json
+  created_at       timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ─── RELATIONSHIPS ────────────────────────────────────────────────────────────
+
+// users
+Ref: users.program_id         > programs.id
+Ref: users.created_by_user_id > users.id
+
+// auth_tokens
+Ref: auth_tokens.user_id > users.id
+
+// courses
+Ref: courses.program_id             > programs.id
+Ref: courses.prerequisite_course_id > courses.id
+
+// course_offerings
+Ref: course_offerings.course_id          > courses.id
+Ref: course_offerings.academic_term_id   > academic_terms.id
+Ref: course_offerings.teacher_id         > users.id
+Ref: course_offerings.created_by_user_id > users.id
+
+// enrollments
+Ref: enrollments.student_id                          > users.id
+Ref: enrollments.course_offering_id                  > course_offerings.id
+Ref: enrollments.final_grade_approved_by_teacher_id  > users.id
+Ref: enrollments.created_by_user_id                  > users.id
+
+// grade_components
+Ref: grade_components.course_offering_id > course_offerings.id
+
+// grade_records
+Ref: grade_records.grade_component_id   > grade_components.id
+Ref: grade_records.student_id           > users.id
+Ref: grade_records.graded_by_teacher_id > users.id
+
+// attendance_sessions
+Ref: attendance_sessions.course_offering_id    > course_offerings.id
+Ref: attendance_sessions.created_by_teacher_id > users.id
+
+// attendance_records
+Ref: attendance_records.attendance_session_id  > attendance_sessions.id
+Ref: attendance_records.student_id             > users.id
+Ref: attendance_records.recorded_by_teacher_id > users.id
+
+// student_invoices
+Ref: student_invoices.student_id          > users.id
+Ref: student_invoices.academic_term_id    > academic_terms.id
+Ref: student_invoices.created_by_admin_id > users.id
+
+// payments
+Ref: payments.student_id           > users.id
+Ref: payments.invoice_id           > student_invoices.id
+Ref: payments.received_by_admin_id > users.id
+
+// financial_holds
+Ref: financial_holds.student_id          > users.id
+Ref: financial_holds.placed_by_admin_id  > users.id
+Ref: financial_holds.released_by_admin_id > users.id
+
+// clubs
+Ref: clubs.advisor_teacher_id  > users.id
+Ref: clubs.managed_by_admin_id > users.id
+
+// club_memberships
+Ref: club_memberships.club_id              > clubs.id
+Ref: club_memberships.student_id          > users.id
+Ref: club_memberships.approved_by_admin_id > users.id
+Ref: club_memberships.reviewed_by_admin_id > users.id
+
+// campus_events
+Ref: campus_events.club_id          > clubs.id
+Ref: campus_events.managed_by_user_id > users.id
+
+// campus_event_registrations
+Ref: campus_event_registrations.campus_event_id > campus_events.id
+Ref: campus_event_registrations.user_id         > users.id
+
+// news_posts
+Ref: news_posts.created_by_user_id > users.id
+Ref: news_posts.updated_by_user_id > users.id
+
+// notifications
+Ref: notifications.user_id          > users.id
+Ref: notifications.created_by_user_id > users.id
+
+// messages
+Ref: messages.sender_id    > users.id
+Ref: messages.recipient_id > users.id
+Ref: messages.parent_id    > messages.id
+
+// ai_chat_messages
+Ref: ai_chat_messages.student_id > users.id

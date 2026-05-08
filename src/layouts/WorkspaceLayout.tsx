@@ -19,6 +19,8 @@ export default function WorkspaceLayout({ role }: WorkspaceLayoutProps) {
   const { user } = useAuth();
   const workspace = getWorkspaceConfig(role);
   const page = workspace.pageTitles[location.pathname] || { title: workspace.label };
+  const profilePath = workspace.nav.find((item) => item.title === "Profile")?.path;
+  const notificationPath = workspace.nav.find((item) => item.title === "Inbox" || item.title === "Messages")?.path;
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -38,6 +40,8 @@ export default function WorkspaceLayout({ role }: WorkspaceLayoutProps) {
           subtitle={page.subtitle}
           userName={user?.full_name ?? workspace.label}
           role={workspace.label}
+          profilePath={profilePath}
+          notificationPath={notificationPath}
           onMenuClick={() => setMobileOpen(true)}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

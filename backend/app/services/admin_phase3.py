@@ -34,7 +34,35 @@ def _create_audit_log(
     action: str,
     summary: str,
 ) -> None:
-    return
+    if actor_user_id is None:
+        return
+    try:
+        db.execute(
+            text(
+                """
+                INSERT INTO notifications (
+                  user_id, category, severity, title, message,
+                  source_entity_type, source_entity_id,
+                  created_by_user_id, delivered_at
+                ) VALUES (
+                  :user_id, 'audit', 'info', :title, :message,
+                  :source_entity_type, :source_entity_id,
+                  :created_by_user_id, :delivered_at
+                )
+                """
+            ),
+            {
+                "user_id": actor_user_id,
+                "title": summary,
+                "message": f"{action.replace('_', ' ').title()} on {entity_type} #{entity_id}",
+                "source_entity_type": entity_type,
+                "source_entity_id": int(entity_id) if str(entity_id).isdigit() else None,
+                "created_by_user_id": actor_user_id,
+                "delivered_at": datetime.now(UTC).replace(tzinfo=None),
+            },
+        )
+    except Exception:
+        pass
 
 
 def _create_notification(
@@ -1241,6 +1269,7 @@ def create_admin_club(db: Session, actor_user_id: int, payload: ClubUpsertReques
 
 
 def update_admin_club(db: Session, actor_user_id: int, club_id: int, payload: ClubUpsertRequest) -> dict:
+    admin_profile_id = _get_admin_profile_id(db, actor_user_id)
     existing_club = db.execute(
         text("SELECT id FROM clubs WHERE id = :club_id"),
         {"club_id": club_id},
