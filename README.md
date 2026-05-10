@@ -34,6 +34,7 @@ A full-stack web application for managing academic operations, student services,
 | Manage users | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Full system access | ❌ | ❌ | ❌ | ❌ | ✅ |
 
+
 ## Repository Structure
 
 ```
