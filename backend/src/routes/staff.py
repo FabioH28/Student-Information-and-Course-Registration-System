@@ -312,6 +312,25 @@ def assign_teacher(offering_id: int, body: AssignTeacherIn, current_user: User =
     return _offering_payload(offering)
 
 
+@router.get("/instructors")
+def list_instructors(current_user: User = Depends(require_roles("staff", "admin", "academic_staff", "system_admin")), db: Session = Depends(get_db)):
+    """Lightweight list of instructors for staff pickers (offering creation, teacher assignment)."""
+    rows = db.query(Instructor).all()
+    return [
+        {
+            "id": ins.id,
+            "user_id": ins.user_id,
+            "name": f"{(ins.title + ' ') if ins.title else ''}{ins.first_name} {ins.last_name}".strip(),
+            "first_name": ins.first_name,
+            "last_name": ins.last_name,
+            "title": ins.title,
+            "department_id": ins.department_id,
+            "department_name": ins.department.name if getattr(ins, "department", None) else None,
+        }
+        for ins in rows
+    ]
+
+
 @router.get("/course-selections")
 def list_course_selections(current_user: User = Depends(require_roles("staff", "admin", "academic_staff", "system_admin")), db: Session = Depends(get_db)):
     q = db.query(StudentCourseSelection).join(Offering, Offering.id == StudentCourseSelection.course_offering_id)

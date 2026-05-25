@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { RequireAuth } from "@/components/RequireAuth";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
@@ -46,6 +48,7 @@ import AcademicDashboard from "@/pages/academic-staff/AcademicDashboard";
 import AcademicCourseCatalog from "@/pages/academic-staff/AcademicCourseCatalog";
 import AcademicStudents from "@/pages/academic-staff/AcademicStudents";
 import AcademicProfile from "@/pages/academic-staff/AcademicProfile";
+import AcademicOfferingsManager from "@/pages/academic-staff/AcademicOfferingsManager";
 import FinanceStaffLayout from "@/layouts/FinanceStaffLayout";
 import FinanceDashboard from "@/pages/finance-staff/FinanceDashboard";
 import FinanceInvoices from "@/pages/finance-staff/FinanceInvoices";
@@ -81,7 +84,9 @@ function PlaceholderPage({ title }: { title: string }) {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
       <AuthProvider>
+        <Toaster position="top-right" richColors closeButton expand={false} />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LoginPage />} />
@@ -136,6 +141,7 @@ export default function App() {
                 <Route path="students" element={<AcademicStudents />} />
                 <Route path="staff-timetable" element={<StaffTimetablePage />} />
                 <Route path="staff-course-offerings" element={<StaffCourseOfferingsPage />} />
+                <Route path="offerings" element={<AcademicOfferingsManager />} />
                 <Route path="staff-buildings-rooms" element={<StaffBuildingsRoomsPage />} />
                 <Route path="communications" element={<StaffCommunications />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
@@ -150,6 +156,7 @@ export default function App() {
                 <Route path="students" element={<AcademicStudents />} />
                 <Route path="timetable" element={<StaffTimetablePage />} />
                 <Route path="course-offerings" element={<StaffCourseOfferingsPage />} />
+                <Route path="manage-offerings" element={<AcademicOfferingsManager />} />
                 <Route path="buildings-rooms" element={<StaffBuildingsRoomsPage />} />
                 <Route path="communications" element={<StaffCommunications />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
@@ -187,6 +194,7 @@ export default function App() {
           </Routes>
         </BrowserRouter>
       </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

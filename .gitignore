@@ -53,3 +53,9 @@ backend/database/xampp-backups/
 backend/database/mysql/backups/
 backend/database/mysql/backup-*.sql
 *.bak-*
+
+# Local tool state
+.claude/
+
+# Local run logs
+.run-logs/

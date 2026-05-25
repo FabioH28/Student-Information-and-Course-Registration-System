@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { canonicalRole } from "@/lib/authRoles";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 
 interface TopBarProps {
@@ -47,6 +48,7 @@ export function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
           <Search className="h-4 w-4" />
           <span>Search CIS</span>
         </div>
+        <ThemeToggle />
         <div className="relative">
           <button
             type="button"

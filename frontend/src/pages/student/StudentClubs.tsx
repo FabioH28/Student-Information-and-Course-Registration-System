@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface DirectoryClub {
   club_id: number;
@@ -34,6 +35,7 @@ function formatDate(value: string) {
 
 export default function StudentClubs() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const { data, isLoading } = useQuery({
     queryKey: ["student-clubs"],
@@ -41,8 +43,20 @@ export default function StudentClubs() {
   });
 
   const join = useMutation({
-    mutationFn: (clubId: number) => api.post(`/clubs/${clubId}/join`, {}),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["student-clubs"] }),
+    mutationFn: (clubId: number) => api.post<{ status?: string; message?: string }>(`/clubs/${clubId}/join`, {}),
+    onSuccess: (result, clubId) => {
+      queryClient.invalidateQueries({ queryKey: ["student-clubs"] });
+      const club = data?.directory.find((c) => c.club_id === clubId);
+      const status = result?.status ?? "submitted";
+      const isApproved = status === "active" || status === "approved";
+      toast({
+        title: isApproved ? `Joined ${club?.club_name ?? "club"}` : `Request sent to ${club?.club_name ?? "club"}`,
+        description: result?.message ?? (isApproved
+          ? "You're now an active member."
+          : "Waiting for the club advisor or academic staff to review your request."),
+      });
+    },
+    onError: (e: Error) => toast({ title: "Could not join club", description: e.message, variant: "destructive" }),
   });
 
   const memberClubIds = useMemo(() => new Set((data?.memberships ?? []).map((m) => m.club_id)), [data]);
@@ -71,7 +85,17 @@ export default function StudentClubs() {
               </div>
             </div>
             {directory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No clubs match your search.</p>
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <Trophy className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm font-medium text-foreground">
+                  {search ? "No clubs match your search." : "No clubs available yet."}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {search
+                    ? "Try a different search term."
+                    : "Check back soon — academic staff publishes new clubs throughout the semester."}
+                </p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {directory.map((c) => {

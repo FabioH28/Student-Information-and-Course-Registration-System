@@ -22,6 +22,17 @@ async function request<T>(method: string, path: string, body?: unknown, auth = t
     throw new Error("Could not reach the backend. Please check that the API server is running.");
   }
   if (!res.ok) {
+    // Auto-clear stale auth on 401 from authenticated requests, so the app can recover
+    // (e.g. after a JWT secret rotation or token expiry).
+    if (res.status === 401 && auth && path !== "/auth/login") {
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("cis.user");
+      } catch { /* ignore */ }
+      if (typeof window !== "undefined" && window.location.pathname !== "/") {
+        window.location.href = "/";
+      }
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     const detail = Array.isArray(err.detail)
       ? err.detail.map((item: { msg?: string }) => item.msg ?? "Validation error").join(", ")
@@ -886,8 +897,37 @@ export interface StaffCourseSelectionOut {
   approved_at: string | null;
 }
 
+export interface StaffInstructorOut {
+  id: number;
+  user_id: number;
+  name: string;
+  first_name: string;
+  last_name: string;
+  title: string | null;
+  department_id: number | null;
+  department_name: string | null;
+}
+
+export interface OfferingCreatePayload {
+  course_id: number;
+  instructor_id: number;
+  semester_id: number;
+  program_id: number;
+  academic_year: string;
+  academic_period: string;
+  capacity: number;
+  enrollment_open?: boolean;
+  selection_deadline?: string | null;
+  status?: string;
+}
+
 export const staffApi = {
   courseOfferings: () => api.get<StaffOfferingOut[]>("/api/staff/course-offerings"),
+  createOffering: (body: OfferingCreatePayload) => api.post<StaffOfferingOut>("/api/staff/course-offerings", body),
+  updateOffering: (id: number, body: OfferingCreatePayload) => api.put<StaffOfferingOut>(`/api/staff/course-offerings/${id}`, body),
+  deleteOffering: (id: number) => api.delete<{ deleted: boolean }>(`/api/staff/course-offerings/${id}`),
+  assignTeacher: (id: number, instructor_id: number) => api.post<StaffOfferingOut>(`/api/staff/course-offerings/${id}/assign-teacher`, { instructor_id }),
+  instructors: () => api.get<StaffInstructorOut[]>("/api/staff/instructors"),
   timetable: () => api.get<StaffTimetableOut[]>("/api/staff/timetable"),
   courseSelections: () => api.get<StaffCourseSelectionOut[]>("/api/staff/course-selections"),
   approveCourseSelection: (id: number) => api.post<{ success: boolean; selection_id: number; status: string }>(`/api/staff/course-selections/${id}/approve`, {}),

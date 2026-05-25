@@ -5,13 +5,14 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import {
   studentsApi, offeringsApi, gradesApi, notificationsApi,
   attendanceApi, registrationsApi, progressionApi,
 } from "@/lib/api";
-import { gpaSeverity } from "@/lib/utils";
+import { gpaSeverity, dedupTimetable } from "@/lib/utils";
 
 const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -36,7 +37,8 @@ export default function StudentDashboard() {
 
   const { data: profile } = useQuery({ queryKey: ["student-me"], queryFn: studentsApi.me });
   const { data: myCourses = [] } = useQuery({ queryKey: ["student-my-courses"], queryFn: offeringsApi.studentMyCourses });
-  const { data: timetable = [] } = useQuery({ queryKey: ["student-timetable"], queryFn: offeringsApi.studentTimetable });
+  const { data: rawTimetable = [] } = useQuery({ queryKey: ["student-timetable"], queryFn: offeringsApi.studentTimetable });
+  const timetable = useMemo(() => dedupTimetable(rawTimetable), [rawTimetable]);
   const { data: grades = [] } = useQuery({ queryKey: ["grades-me"], queryFn: gradesApi.my });
   const { data: notifications = [] } = useQuery({ queryKey: ["notifications"], queryFn: () => notificationsApi.list() });
   const { data: attendance = [] } = useQuery({ queryKey: ["student-attendance"], queryFn: attendanceApi.studentGrouped });
