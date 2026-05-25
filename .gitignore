@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+*.out
+*.err
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+.chrome-debug/
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vs/
+
+# Python / FastAPI
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+backend/venv/
+backend/.venv/
+.pytest_cache/
+.mypy_cache/
+
+# Local runtime/generated data
+.run-logs/
+backend/uploads/
+
+# Environment variables — NEVER commit these
+.env
+.env.*
+!.env.example
+!backend/.env.example
+
+# Local database backups and machine-specific dumps
+backend/database/xampp-backups/
+backend/database/mysql/backups/
+backend/database/mysql/backup-*.sql
+*.bak-*
