@@ -69,18 +69,6 @@ import AdminProfile from "@/pages/admin/AdminProfile";
 
 const queryClient = new QueryClient();
 
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="grid gap-4">
-      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
-        <p className="text-sm text-muted-foreground">Workspace</p>
-        <h2 className="mt-1 text-2xl font-semibold text-foreground">{title}</h2>
-        <p className="mt-2 text-muted-foreground">This section is ready for the next page implementation.</p>
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -126,6 +114,7 @@ export default function App() {
                 <Route path="attendance" element={<AttendancePage />} />
                 <Route path="grades" element={<GradesManagement />} />
                 <Route path="student" element={<Student />} />
+                <Route path="inbox" element={<StudentInbox />} />
                 <Route path="profile" element={<InstructorProfilePage />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>
@@ -144,6 +133,7 @@ export default function App() {
                 <Route path="offerings" element={<AcademicOfferingsManager />} />
                 <Route path="staff-buildings-rooms" element={<StaffBuildingsRoomsPage />} />
                 <Route path="communications" element={<StaffCommunications />} />
+                <Route path="inbox" element={<StudentInbox />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>
               <Route path="/staff" element={<AcademicStaffLayout />}>
@@ -159,6 +149,7 @@ export default function App() {
                 <Route path="manage-offerings" element={<AcademicOfferingsManager />} />
                 <Route path="buildings-rooms" element={<StaffBuildingsRoomsPage />} />
                 <Route path="communications" element={<StaffCommunications />} />
+                <Route path="inbox" element={<StudentInbox />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>
             </Route>

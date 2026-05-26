@@ -44,7 +44,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   const submitEmail = async () => {
     setError(""); setLoading(true);
     try { await requestPasswordReset(email); setStep("reset"); }
-    catch (e: any) { setError(e.message ?? "Request failed"); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Request failed"); }
     finally { setLoading(false); }
   };
 
@@ -54,7 +54,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
     if (newPassword !== confirmPassword) { setError("Passwords do not match."); return; }
     setLoading(true);
     try { await confirmPasswordReset(token, newPassword); setStep("done"); }
-    catch (e: any) { setError(e.message ?? "Reset failed. Check your code."); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Reset failed. Check your code."); }
     finally { setLoading(false); }
   };
 

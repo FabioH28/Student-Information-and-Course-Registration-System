@@ -23,8 +23,8 @@ export default function VerifyEmailPage() {
     try {
       await verifyEmail(emailFromState, code);
       setDone(true);
-    } catch (err: any) {
-      setError(err.message ?? "Verification failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
       setLoading(false);
     }

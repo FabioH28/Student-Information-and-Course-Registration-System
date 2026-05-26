@@ -563,8 +563,8 @@ BEGIN
     INSERT IGNORE INTO users (id, email, full_name, password_hash, role, is_first_login, is_active, status)
     VALUES (
       uid,
-      CONCAT(LOWER(ELT(1 + MOD(i - 1, 20), 'Ardit','Elira','Mateo','Sara','Luan','Nora','Dion','Lea','Enea','Arta','Klea','Noel','Mira','Jon','Alba','Tedi','Ina','Ergi','Rina','Bora')), '.', LOWER(ELT(1 + MOD(i + 6, 20), 'Hoxha','Krasniqi','Dervishi','Berisha','Kola','Shehu','Gashi','Leka','Basha','Prifti','Mema','Rama','Sinani','Marku','Doda','Bajrami','Mehmeti','Osmani','Jashari','Pasha')), LPAD(i,3,'0'), '@cis.edu'),
-      CONCAT(ELT(1 + MOD(i - 1, 20), 'Ardit','Elira','Mateo','Sara','Luan','Nora','Dion','Lea','Enea','Arta','Klea','Noel','Mira','Jon','Alba','Tedi','Ina','Ergi','Rina','Bora'), ' ', ELT(1 + MOD(i + 6, 20), 'Hoxha','Krasniqi','Dervishi','Berisha','Kola','Shehu','Gashi','Leka','Basha','Prifti','Mema','Rama','Sinani','Marku','Doda','Bajrami','Mehmeti','Osmani','Jashari','Pasha')),
+      CONCAT(LOWER(ELT(1 + MOD(i - 1, 20), 'Oliver','Hannah','Caleb','Sophie','Isaac','Chloe','Jacob','Madison','Owen','Lucy','Riley','Hazel','Ryan','Layla','Adam','Zara','Eli','Naomi','Connor','Penny')), '.', LOWER(ELT(1 + MOD(i + 6, 20), 'Foster','Hayes','Murphy','Bell','Ward','Cox','Bailey','Howard','Ross','Bryant','Hunter','Russell','Griffin','Stevens','Lawson','Powell','Webb','Watson','Murray','Fletcher')), LPAD(i,3,'0'), '@cis.edu'),
+      CONCAT(ELT(1 + MOD(i - 1, 20), 'Oliver','Hannah','Caleb','Sophie','Isaac','Chloe','Jacob','Madison','Owen','Lucy','Riley','Hazel','Ryan','Layla','Adam','Zara','Eli','Naomi','Connor','Penny'), ' ', ELT(1 + MOD(i + 6, 20), 'Foster','Hayes','Murphy','Bell','Ward','Cox','Bailey','Howard','Ross','Bryant','Hunter','Russell','Griffin','Stevens','Lawson','Powell','Webb','Watson','Murray','Fletcher')),
       '$2b$12$ArSjr5kl4WLllxTlXXuTyuJ4fdc9RuF1BU5CLoy.w0MCSXr/CMxRu',
       'student',
       0,
@@ -576,8 +576,8 @@ BEGIN
       sid,
       uid,
       CONCAT('CIS-2026-', LPAD(100 + i, 3, '0')),
-      ELT(1 + MOD(i - 1, 20), 'Ardit','Elira','Mateo','Sara','Luan','Nora','Dion','Lea','Enea','Arta','Klea','Noel','Mira','Jon','Alba','Tedi','Ina','Ergi','Rina','Bora'),
-      ELT(1 + MOD(i + 6, 20), 'Hoxha','Krasniqi','Dervishi','Berisha','Kola','Shehu','Gashi','Leka','Basha','Prifti','Mema','Rama','Sinani','Marku','Doda','Bajrami','Mehmeti','Osmani','Jashari','Pasha'),
+      ELT(1 + MOD(i - 1, 20), 'Oliver','Hannah','Caleb','Sophie','Isaac','Chloe','Jacob','Madison','Owen','Lucy','Riley','Hazel','Ryan','Layla','Adam','Zara','Eli','Naomi','Connor','Penny'),
+      ELT(1 + MOD(i + 6, 20), 'Foster','Hayes','Murphy','Bell','Ward','Cox','Bailey','Howard','Ross','Bryant','Hunter','Russell','Griffin','Stevens','Lawson','Powell','Webb','Watson','Murray','Fletcher'),
       CONCAT('+355682', LPAD(i,6,'0')),
       DATE_ADD('1999-01-01', INTERVAL MOD(i, 1800) DAY),
       pid,

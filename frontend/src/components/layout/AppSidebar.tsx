@@ -59,6 +59,7 @@ const instructorNav: NavItem[] = [
   { title: "Attendance", icon: CheckSquare, path: "/instructor/attendance" },
   { title: "Grades", icon: GraduationCap, path: "/instructor/grades" },
   { title: "Students", icon: Users, path: "/instructor/student" },
+  { title: "Inbox", icon: Inbox, path: "/instructor/inbox" },
   { title: "Change Password", icon: KeyRound, path: "/instructor/change-password" },
 ];
 
@@ -74,6 +75,7 @@ const academicStaffNav: NavItem[] = [
   { title: "Staff Timetable", icon: CalendarDays, path: "/academic-staff/staff-timetable" },
   { title: "Buildings & Rooms", icon: Calendar, path: "/academic-staff/staff-buildings-rooms" },
   { title: "Communications", icon: Megaphone, path: "/academic-staff/communications" },
+  { title: "Inbox", icon: Inbox, path: "/academic-staff/inbox" },
   { title: "Change Password", icon: KeyRound, path: "/academic-staff/change-password" },
 ];
 
@@ -89,6 +91,7 @@ const staffNav: NavItem[] = [
   { title: "Grades", icon: GraduationCap, path: "/staff/grades" },
   { title: "Students", icon: Users, path: "/staff/students" },
   { title: "Communications", icon: Megaphone, path: "/staff/communications" },
+  { title: "Inbox", icon: Inbox, path: "/staff/inbox" },
   { title: "Change Password", icon: KeyRound, path: "/staff/change-password" },
 ];
 

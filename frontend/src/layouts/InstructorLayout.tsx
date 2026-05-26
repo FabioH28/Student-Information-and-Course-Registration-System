@@ -12,6 +12,7 @@ const pageTitles: Record<string, { title: string; subtitle?: string }> = {
   "/instructor/attendance": { title: "Attendance", subtitle: "Mark and manage attendance" },
   "/instructor/grades": { title: "Grades", subtitle: "Manage student grades" },
   "/instructor/student": { title: "Students", subtitle: "Manage and review enrolled students" },
+  "/instructor/inbox": { title: "Inbox", subtitle: "Notifications and direct messages" },
   "/instructor/profile": { title: "Profile", subtitle: "Your instructor account" },
   "/instructor/change-password": { title: "Change Password", subtitle: "Update your account password" },
 };

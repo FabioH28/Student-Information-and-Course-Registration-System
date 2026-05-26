@@ -134,8 +134,8 @@ uvicorn src.main:app --reload --port 8000
 ```
 
 - API runs at `http://127.0.0.1:8000`
-- Interactive docs at `http://127.0.0.1:8000/docs`
-- Health check at `http://127.0.0.1:8000/docs` (OpenAPI)
+- Interactive docs at `http://127.0.0.1:8000/docs` (Swagger UI / OpenAPI)
+- Health check at `http://127.0.0.1:8000/health`
 
 ### Environment Variables
 

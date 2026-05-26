@@ -24,6 +24,8 @@ const pageTitles: Record<string, { title: string; subtitle?: string }> = {
   "/staff/students": { title: "Students", subtitle: "Student records" },
   "/staff/communications": { title: "Communications", subtitle: "Announcements, events and club requests" },
   "/academic-staff/communications": { title: "Communications", subtitle: "Announcements, events and club requests" },
+  "/academic-staff/inbox": { title: "Inbox", subtitle: "Notifications and direct messages" },
+  "/staff/inbox": { title: "Inbox", subtitle: "Notifications and direct messages" },
   "/academic-staff/offerings": { title: "Manage Offerings", subtitle: "Create course → program → instructor mappings" },
   "/staff/manage-offerings": { title: "Manage Offerings", subtitle: "Create course → program → instructor mappings" },
   "/academic-staff/profile": { title: "Profile", subtitle: "Your CIS staff account" },
