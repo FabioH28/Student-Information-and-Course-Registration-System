@@ -14,7 +14,6 @@ router = APIRouter(prefix="/messages", tags=["Messages"])
 
 STAFF_ROLES = {"academic_staff", "finance_staff", "system_admin", "instructor"}
 BROADCAST_ROLES = {"academic_staff", "system_admin"}
-STUDENT_ALLOWED_RECIPIENT_ROLES = {"instructor", "academic_staff"}
 
 
 class SendMessageIn(BaseModel):
@@ -95,7 +94,8 @@ def contacts(current_user: User = Depends(get_current_user), db: Session = Depen
     role = canonical_role(current_user.role)
     q = db.query(User).filter(User.is_active == True, User.id != current_user.id)
     if role == "student":
-        rows = [u for u in q.all() if canonical_role(u.role) in STUDENT_ALLOWED_RECIPIENT_ROLES]
+        # students may not message other students
+        rows = [u for u in q.all() if canonical_role(u.role) != "student"]
     else:
         rows = q.all()
     rows.sort(key=lambda u: (canonical_role(u.role), _display_name(u)))
@@ -123,8 +123,8 @@ def send_message(body: SendMessageIn, current_user: User = Depends(get_current_u
         raise HTTPException(status_code=404, detail="Recipient not found.")
     if not recipient.is_active:
         raise HTTPException(status_code=400, detail="This recipient is not available for messaging.")
-    if sender_role == "student" and canonical_role(recipient.role) not in STUDENT_ALLOWED_RECIPIENT_ROLES:
-        raise HTTPException(status_code=403, detail="Students may only message instructors and academic staff.")
+    if sender_role == "student" and canonical_role(recipient.role) == "student":
+        raise HTTPException(status_code=403, detail="Students may not message other students.")
 
     msg = Message(sender_id=current_user.id, recipient_id=body.recipient_id, subject=body.subject,
                   body=body.body, parent_id=body.parent_id, is_broadcast=False)
