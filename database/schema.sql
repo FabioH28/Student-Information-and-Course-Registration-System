@@ -9,7 +9,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS ai_chat_messages, ai_chat_sessions, password_reset_tokens,
     email_verification_tokens, audit_logs, announcements, notifications, holds, payments, invoices,
     attendance_records, attendance_sessions, assignment_submissions, assignments, weekly_topics, weekly_tasks, course_materials, class_sessions, grades, student_course_status, student_course_selections, registrations, timetable_entries,
-    classrooms, groups, buildings,
+    classrooms, `groups`, buildings,
     offerings, semesters, course_prerequisites, courses, teacher_faculty_assignments, instructors, staff_faculty_scopes, finance_faculty_scopes, staff_profiles, students, programs,
     departments, faculties, users;
 SET FOREIGN_KEY_CHECKS = 1;
@@ -283,7 +283,7 @@ CREATE TABLE student_course_selections (
 -- -------------------------------------------------------------
 -- CAMPUS SCHEDULING RESOURCES
 -- -------------------------------------------------------------
-CREATE TABLE groups (
+CREATE TABLE `groups` (
     id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
     name          VARCHAR(80)  NOT NULL,
     program_id    INT UNSIGNED NULL,
@@ -467,7 +467,7 @@ CREATE TABLE timetable_entries (
     PRIMARY KEY (id),
     INDEX ix_timetable_entries_offering (course_offering_id),
     CONSTRAINT fk_timetable_entries_offering FOREIGN KEY (course_offering_id) REFERENCES offerings(id) ON DELETE CASCADE,
-    CONSTRAINT fk_timetable_entries_group FOREIGN KEY (group_id) REFERENCES groups(id),
+    CONSTRAINT fk_timetable_entries_group FOREIGN KEY (group_id) REFERENCES `groups`(id),
     CONSTRAINT fk_timetable_entries_building FOREIGN KEY (building_id) REFERENCES buildings(id),
     CONSTRAINT fk_timetable_entries_staff FOREIGN KEY (created_by_staff_id) REFERENCES staff_profiles(id),
     CONSTRAINT fk_timetable_entries_classroom FOREIGN KEY (classroom_id) REFERENCES classrooms(id),

@@ -80,3 +80,53 @@ def send_refusal_email(to_email: str, full_name: str, reason: str = ""):
       <p style="color:#6b7280;font-size:13px;">If you believe this is a mistake, please contact your CIS administrator.</p>
     """
     _send(to_email, "CIS account registration update", body)
+
+
+def _credentials_box(email: str, password: str) -> str:
+    return f"""
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
+      <p style="color:#374151;font-size:14px;margin:0 0 6px;">Email: <strong>{email}</strong></p>
+      <p style="color:#374151;font-size:14px;margin:0;">Temporary password: <strong style="font-family:monospace;">{password}</strong></p>
+    </div>"""
+
+
+def send_account_created_email(to_email: str, full_name: str, role: str, temp_password: str):
+    name = full_name or to_email.split("@")[0]
+    role_label = role.replace("_", " ").title()
+    body = f"""
+      <p style="color:#374151;font-size:15px;">Hi <strong>{name}</strong>,</p>
+      <p style="color:#374151;font-size:15px;">An administrator has created a CIS account for you with the role <strong>{role_label}</strong>.</p>
+      {_credentials_box(to_email, temp_password)}
+      <p style="color:#374151;font-size:15px;">Sign in at <strong>localhost:8088</strong>. You'll be asked to change your password on first login.</p>
+    """
+    _send(to_email, "Your CIS account has been created", body)
+
+
+def send_account_update_email(to_email: str, full_name: str, role: str | None = None, is_active: bool | None = None):
+    name = full_name or to_email.split("@")[0]
+    changes = []
+    if role is not None:
+        changes.append(f"Your role is now <strong>{role.replace('_', ' ').title()}</strong>.")
+    if is_active is not None:
+        state = "activated" if is_active else "deactivated"
+        color = "#16a34a" if is_active else "#dc2626"
+        changes.append(f'Your account has been <strong style="color:{color};">{state}</strong>.')
+    changes_block = "".join(f'<p style="color:#374151;font-size:15px;">{c}</p>' for c in changes)
+    body = f"""
+      <p style="color:#374151;font-size:15px;">Hi <strong>{name}</strong>,</p>
+      <p style="color:#374151;font-size:15px;">An administrator has updated your CIS account.</p>
+      {changes_block}
+      <p style="color:#6b7280;font-size:13px;">If you have questions, contact your CIS administrator.</p>
+    """
+    _send(to_email, "Your CIS account was updated", body)
+
+
+def send_admin_password_reset_email(to_email: str, full_name: str, temp_password: str):
+    name = full_name or to_email.split("@")[0]
+    body = f"""
+      <p style="color:#374151;font-size:15px;">Hi <strong>{name}</strong>,</p>
+      <p style="color:#374151;font-size:15px;">An administrator has reset your CIS password. Use the temporary password below to sign in, then change it immediately.</p>
+      {_credentials_box(to_email, temp_password)}
+      <p style="color:#6b7280;font-size:13px;">If you didn't expect this, contact your CIS administrator right away.</p>
+    """
+    _send(to_email, "Your CIS password has been reset", body)

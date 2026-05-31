@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Plus, Calendar, CheckCircle2, X, Pencil } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DataPagination } from "@/components/ui/data-pagination";
+import { usePagination } from "@/hooks/use-pagination";
 import { useToast } from "@/hooks/use-toast";
 import { semestersApi, type SemesterOut } from "@/lib/api";
 
@@ -18,6 +18,8 @@ export default function AdminSemesters() {
   const [editing, setEditing] = useState<SemesterOut | null>(null);
 
   const { data: semesters = [], isLoading } = useQuery({ queryKey: ["semesters"], queryFn: semestersApi.list });
+
+  const pagination = usePagination(semesters, 10);
 
   const activate = useMutation({
     mutationFn: async (id: number) => {
@@ -34,13 +36,17 @@ export default function AdminSemesters() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Semesters" description="Academic terms and key dates">
-        <Button onClick={() => setComposing(true)}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Semesters</h2>
+          <p className="text-sm text-muted-foreground">Academic terms and key dates</p>
+        </div>
+        <Button size="sm" onClick={() => setComposing(true)}>
           <Plus className="mr-2 h-4 w-4" /> New semester
         </Button>
-      </PageHeader>
+      </div>
 
-      <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-xl border bg-card shadow-card">
+      <section className="overflow-hidden rounded-lg border">
         {isLoading ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Loading semesters...</p>
         ) : semesters.length === 0 ? (
@@ -48,7 +54,7 @@ export default function AdminSemesters() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+              <thead className="border-b text-xs font-medium text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left">Name</th>
                   <th className="px-4 py-3 text-left">Start</th>
@@ -60,7 +66,7 @@ export default function AdminSemesters() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {semesters.map((s) => (
+                {pagination.pageItems.map((s) => (
                   <tr key={s.id} className={`hover:bg-muted/30 ${s.is_active ? "bg-primary/5" : ""}`}>
                     <td className="px-4 py-3 font-medium text-foreground">{s.name}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{s.start_date}</td>
@@ -83,7 +89,18 @@ export default function AdminSemesters() {
             </table>
           </div>
         )}
-      </motion.section>
+        <DataPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          startIndex={pagination.startIndex}
+          endIndex={pagination.endIndex}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          itemLabel="semesters"
+        />
+      </section>
 
       {composing && (
         <SemesterModal onClose={() => setComposing(false)} onSaved={() => {

@@ -9,10 +9,21 @@ from src.models.instructor import Instructor
 from src.models.user import User
 from src.models.offering import Offering
 from src.utils.security import hash_password, require_roles
+from src.utils import email as email_utils
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
 instructor_profile_router = APIRouter(prefix="/api/instructor", tags=["Instructor Profile"])
+
+
+def _notify(send, *args) -> bool:
+    """Best-effort email dispatch. Never fails the admin action if email errors."""
+    try:
+        send(*args)
+        return True
+    except Exception:
+        return False
+
 
 
 class UserCreate(BaseModel):
@@ -51,7 +62,9 @@ def create_user(body: UserCreate, current_user: User = Depends(require_roles("sy
     db.add(user)
     db.commit()
     db.refresh(user)
-    return _payload(user)
+    payload = _payload(user)
+    payload["email_sent"] = _notify(email_utils.send_account_created_email, user.email, user.full_name, user.role, body.password)
+    return payload
 
 
 @router.post("/{user_id}/approve", response_model=dict)
@@ -64,7 +77,9 @@ def approve_user(user_id: int, body: ApproveIn, current_user: User = Depends(req
     user.is_active = True
     db.commit()
     db.refresh(user)
-    return _payload(user)
+    payload = _payload(user)
+    payload["email_sent"] = _notify(email_utils.send_approval_email, user.email, user.full_name, user.role)
+    return payload
 
 
 @router.post("/{user_id}/refuse")
@@ -75,7 +90,8 @@ def refuse_user(user_id: int, body: RefuseIn, current_user: User = Depends(requi
     user.status = "refused"
     user.is_active = False
     db.commit()
-    return {"message": "User refused"}
+    email_sent = _notify(email_utils.send_refusal_email, user.email, user.full_name, body.reason or "")
+    return {"message": "User refused", "email_sent": email_sent}
 
 
 @router.patch("/{user_id}", response_model=dict)
@@ -83,11 +99,23 @@ def update_user(user_id: int, body: UserPatch, current_user: User = Depends(requ
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    for key, value in body.model_dump(exclude_none=True).items():
+    if body.is_active is False and user.role in ("admin", "system_admin"):
+        raise HTTPException(status_code=403, detail="Admin accounts cannot be deactivated.")
+    changes = body.model_dump(exclude_none=True)
+    for key, value in changes.items():
         setattr(user, key, value)
     db.commit()
     db.refresh(user)
-    return _payload(user)
+    payload = _payload(user)
+    if changes:
+        payload["email_sent"] = _notify(
+            email_utils.send_account_update_email,
+            user.email,
+            user.full_name,
+            changes.get("role"),
+            changes.get("is_active"),
+        )
+    return payload
 
 
 @router.post("/{user_id}/reset-password")
@@ -98,7 +126,8 @@ def reset_user_password(user_id: int, current_user: User = Depends(require_roles
     user.password_hash = hash_password("password123")
     user.is_first_login = True
     db.commit()
-    return {"message": "Password reset to password123"}
+    email_sent = _notify(email_utils.send_admin_password_reset_email, user.email, user.full_name, "password123")
+    return {"message": "Password reset to password123", "email_sent": email_sent}
 
 
 def _payload(user: User) -> dict:

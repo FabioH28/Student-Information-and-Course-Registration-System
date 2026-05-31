@@ -5,9 +5,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { EmptyState, LoadingState } from "@/components/academic/AcademicShared";
 import { Button } from "@/components/ui/button";
+import { DataPagination } from "@/components/ui/data-pagination";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { usePagination } from "@/hooks/use-pagination";
 import { staffApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +49,8 @@ export default function RegistrationsManagement() {
       || (selection.course_code ?? "").toLowerCase().includes(q)
       || selection.status.toLowerCase().includes(q);
   });
+
+  const pagination = usePagination(filtered, 10);
 
   const counts = {
     requested: selections.filter((item) => item.status === "requested" || item.status === "selected").length,
@@ -99,7 +103,7 @@ export default function RegistrationsManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((selection, index) => {
+                {pagination.pageItems.map((selection, index) => {
                   const isPending = selection.status === "requested" || selection.status === "selected";
                   return (
                     <motion.tr key={selection.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.03 }} className="transition-colors hover:bg-muted/50">
@@ -134,6 +138,17 @@ export default function RegistrationsManagement() {
               </tbody>
             </table>
           </div>
+          <DataPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            startIndex={pagination.startIndex}
+            endIndex={pagination.endIndex}
+            pageSize={pagination.pageSize}
+            onPageChange={pagination.setPage}
+            onPageSizeChange={pagination.setPageSize}
+            itemLabel="registrations"
+          />
         </motion.div>
       )}
     </div>

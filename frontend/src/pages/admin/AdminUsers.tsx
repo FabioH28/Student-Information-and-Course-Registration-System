@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Search, Plus, X, KeyRound, UserCog, UserPlus, UserMinus, CheckCircle2 } from "lucide-react";
+import { Search, Plus, X, KeyRound, UserCog, CheckCircle2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { NativeSelect } from "@/components/ui/native-select";
+import { DataPagination } from "@/components/ui/data-pagination";
+import { usePagination } from "@/hooks/use-pagination";
 import { useToast } from "@/hooks/use-toast";
 import { usersApi, type UserOut } from "@/lib/api";
 
@@ -36,15 +38,18 @@ export default function AdminUsers() {
 
   const reset = useMutation({
     mutationFn: (id: number) => usersApi.resetPassword(id),
-    onSuccess: () => toast({ title: "Password reset", description: "User must change it on next login." }),
+    onSuccess: (res) => toast({
+      title: "Password reset",
+      description: res.email_sent ? "New password emailed to the user." : "User must change it on next login. (Email not sent)",
+    }),
     onError: (e: Error) => toast({ title: "Reset failed", description: e.message, variant: "destructive" }),
   });
 
   const toggleActive = useMutation({
     mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) => usersApi.update(id, { is_active }),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      toast({ title: "User updated" });
+      toast({ title: "User updated", description: res.email_sent ? "User notified by email." : undefined });
     },
     onError: (e: Error) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
@@ -61,19 +66,24 @@ export default function AdminUsers() {
     });
   }, [users, search, roleFilter, statusFilter]);
 
+  const pagination = usePagination(filtered, 10);
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Users" description="System accounts and roles">
-        <Button onClick={() => setComposing(true)}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Users</h2>
+          <p className="text-sm text-muted-foreground">System accounts and roles</p>
+        </div>
+        <Button size="sm" onClick={() => setComposing(true)}>
           <Plus className="mr-2 h-4 w-4" /> New user
         </Button>
-      </PageHeader>
+      </div>
 
       {pending.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-warning/30 bg-warning/5 p-4">
-          <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <UserCog className="h-4 w-4 text-warning" /> {pending.length} account{pending.length === 1 ? "" : "s"} awaiting approval
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
+          <p className="text-sm font-medium text-foreground">
+            {pending.length} account{pending.length === 1 ? "" : "s"} awaiting approval
           </p>
           <div className="mt-3 space-y-2">
             {pending.map((u) => (
@@ -83,7 +93,7 @@ export default function AdminUsers() {
               }} />
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -91,18 +101,18 @@ export default function AdminUsers() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or email..." className="pl-9" />
         </div>
-        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm">
+        <NativeSelect value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-auto">
           <option value="">All roles</option>
           {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-        </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm">
+        </NativeSelect>
+        <NativeSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-auto">
           <option value="">All statuses</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
-        </select>
+        </NativeSelect>
       </div>
 
-      <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-xl border bg-card shadow-card">
+      <section className="overflow-hidden rounded-lg border">
         {isLoading ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Loading users...</p>
         ) : filtered.length === 0 ? (
@@ -110,7 +120,7 @@ export default function AdminUsers() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+              <thead className="border-b text-xs font-medium text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left">Name</th>
                   <th className="px-4 py-3 text-left">Email</th>
@@ -121,7 +131,7 @@ export default function AdminUsers() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filtered.map((u) => (
+                {pagination.pageItems.map((u) => (
                   <tr key={u.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-medium text-foreground">{u.full_name ?? u.display_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
@@ -138,11 +148,14 @@ export default function AdminUsers() {
                         <Button size="sm" variant="outline" onClick={() => reset.mutate(u.id)} disabled={reset.isPending}>
                           <KeyRound className="mr-1 h-3.5 w-3.5" /> Reset
                         </Button>
-                        <Button size="sm" variant="outline"
-                          onClick={() => toggleActive.mutate({ id: u.id, is_active: !u.is_active })}
-                          disabled={toggleActive.isPending}>
-                          {u.is_active ? <><UserMinus className="mr-1 h-3.5 w-3.5" /> Disable</> : <><UserPlus className="mr-1 h-3.5 w-3.5" /> Enable</>}
-                        </Button>
+                        <label className={`flex items-center gap-1.5 text-xs select-none ${["admin","system_admin"].includes(u.role) ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+                          <Switch
+                            checked={u.is_active}
+                            onCheckedChange={(val) => toggleActive.mutate({ id: u.id, is_active: val })}
+                            disabled={toggleActive.isPending || ["admin", "system_admin"].includes(u.role)}
+                          />
+                          <span className="text-muted-foreground">{u.is_active ? "Active" : "Inactive"}</span>
+                        </label>
                       </div>
                     </td>
                   </tr>
@@ -151,7 +164,18 @@ export default function AdminUsers() {
             </table>
           </div>
         )}
-      </motion.section>
+        <DataPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          startIndex={pagination.startIndex}
+          endIndex={pagination.endIndex}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          itemLabel="users"
+        />
+      </section>
 
       {composing && (
         <NewUserModal onClose={() => setComposing(false)} onSaved={() => {
@@ -170,14 +194,21 @@ export default function AdminUsers() {
 }
 
 function PendingRow({ user, onChanged }: { user: UserOut; onChanged: () => void }) {
+  const { toast } = useToast();
   const [role, setRole] = useState(user.role || "student");
   const approve = useMutation({
     mutationFn: () => usersApi.approve(user.id, role),
-    onSuccess: onChanged,
+    onSuccess: (res) => {
+      toast({ title: "User approved", description: res.email_sent ? "Approval emailed to the user." : "(Email not sent)" });
+      onChanged();
+    },
   });
   const refuse = useMutation({
     mutationFn: () => usersApi.refuse(user.id, "Refused by admin"),
-    onSuccess: onChanged,
+    onSuccess: (res) => {
+      toast({ title: "User refused", description: res.email_sent ? "Notification emailed to the user." : "(Email not sent)" });
+      onChanged();
+    },
   });
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-background p-3 text-sm">
@@ -185,9 +216,9 @@ function PendingRow({ user, onChanged }: { user: UserOut; onChanged: () => void 
         <p className="truncate font-medium text-foreground">{user.full_name ?? user.email}</p>
         <p className="truncate text-xs text-muted-foreground">{user.email}</p>
       </div>
-      <select value={role} onChange={(e) => setRole(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-xs">
+      <NativeSelect value={role} onChange={(e) => setRole(e.target.value)} className="h-9 w-auto px-2 text-xs">
         {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-      </select>
+      </NativeSelect>
       <Button size="sm" disabled={approve.isPending} onClick={() => approve.mutate()}>
         <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Approve
       </Button>
@@ -206,7 +237,7 @@ function NewUserModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   const [error, setError] = useState<string | null>(null);
 
   const create = useMutation({
-    mutationFn: () => usersApi.create({ email, password, role }),
+    mutationFn: () => usersApi.create({ email, password, role, full_name: name || undefined }),
     onSuccess: () => { onSaved(); onClose(); },
     onError: (e: Error) => setError(e.message),
   });
@@ -220,9 +251,9 @@ function NewUserModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
         <Field label="Email"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
         <Field label="Password"><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" /></Field>
         <Field label="Role">
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+          <NativeSelect value={role} onChange={(e) => setRole(e.target.value)}>
             {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-          </select>
+          </NativeSelect>
         </Field>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <ModalActions onClose={onClose} onSave={() => { setError(null); create.mutate(); }} canSave={canSave} saving={create.isPending} />
@@ -244,9 +275,9 @@ function EditUserModal({ user, onClose, onSaved }: { user: UserOut; onClose: () 
     <Modal title={`Edit user · ${user.email}`} onClose={onClose}>
       <div className="space-y-3">
         <Field label="Role">
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+          <NativeSelect value={role} onChange={(e) => setRole(e.target.value)}>
             {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-          </select>
+          </NativeSelect>
         </Field>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />

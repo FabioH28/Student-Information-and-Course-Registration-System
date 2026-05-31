@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Plus, Search, BookOpen, Pencil, Trash2, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { DataPagination } from "@/components/ui/data-pagination";
+import { usePagination } from "@/hooks/use-pagination";
 import { useToast } from "@/hooks/use-toast";
 import { coursesApi, facultyApi, type CourseOut } from "@/lib/api";
 
@@ -37,20 +38,26 @@ export default function AdminCourses() {
     return courses.filter((c) => !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
   }, [courses, search]);
 
+  const pagination = usePagination(filtered, 10);
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Courses" description="Course catalog">
-        <Button onClick={() => setComposing(true)}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Courses</h2>
+          <p className="text-sm text-muted-foreground">Course catalog</p>
+        </div>
+        <Button size="sm" onClick={() => setComposing(true)}>
           <Plus className="mr-2 h-4 w-4" /> New course
         </Button>
-      </PageHeader>
+      </div>
 
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by code or name..." className="pl-9" />
       </div>
 
-      <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-xl border bg-card shadow-card">
+      <section className="overflow-hidden rounded-lg border">
         {isLoading ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Loading courses...</p>
         ) : filtered.length === 0 ? (
@@ -58,7 +65,7 @@ export default function AdminCourses() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+              <thead className="border-b text-xs font-medium text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left">Code</th>
                   <th className="px-4 py-3 text-left">Name</th>
@@ -69,7 +76,7 @@ export default function AdminCourses() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filtered.map((c) => (
+                {pagination.pageItems.map((c) => (
                   <tr key={c.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono font-medium text-foreground">{c.code}</td>
                     <td className="px-4 py-3 text-foreground">{c.name}</td>
@@ -91,7 +98,18 @@ export default function AdminCourses() {
             </table>
           </div>
         )}
-      </motion.section>
+        <DataPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          startIndex={pagination.startIndex}
+          endIndex={pagination.endIndex}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          itemLabel="courses"
+        />
+      </section>
 
       {composing && (
         <CourseModal courses={courses} departments={departments} onClose={() => setComposing(false)} onSaved={() => {
@@ -157,16 +175,16 @@ function CourseModal({ course, courses, departments, onClose, onSaved }: {
           <Field label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
           <Field label="Description"><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></Field>
           <Field label="Department">
-            <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+            <NativeSelect value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
               <option value="">Select department...</option>
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            </NativeSelect>
           </Field>
           <Field label="Prerequisite (optional)">
-            <select value={prereq} onChange={(e) => setPrereq(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+            <NativeSelect value={prereq} onChange={(e) => setPrereq(e.target.value)}>
               <option value="">None</option>
               {courses.filter((c) => c.id !== course?.id).map((c) => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
-            </select>
+            </NativeSelect>
           </Field>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">

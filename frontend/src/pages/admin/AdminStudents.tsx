@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Search, GraduationCap, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { DataPagination } from "@/components/ui/data-pagination";
+import { usePagination } from "@/hooks/use-pagination";
 import { useToast } from "@/hooks/use-toast";
 import { studentsApi, type StudentOut } from "@/lib/api";
 
@@ -33,22 +34,27 @@ export default function AdminStudents() {
     });
   }, [students, search, statusFilter]);
 
+  const pagination = usePagination(filtered, 10);
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Students" description="All enrolled students" />
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Students</h2>
+        <p className="text-sm text-muted-foreground">All enrolled students</p>
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or code..." className="pl-9" />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm">
+        <NativeSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-auto">
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </NativeSelect>
       </div>
 
-      <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-xl border bg-card shadow-card">
+      <section className="overflow-hidden rounded-lg border">
         {isLoading ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Loading students...</p>
         ) : filtered.length === 0 ? (
@@ -56,7 +62,7 @@ export default function AdminStudents() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+              <thead className="border-b text-xs font-medium text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left">Student</th>
                   <th className="px-4 py-3 text-left">Code</th>
@@ -67,7 +73,7 @@ export default function AdminStudents() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filtered.map((s) => (
+                {pagination.pageItems.map((s) => (
                   <tr key={s.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-medium text-foreground">{s.first_name} {s.last_name}</td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.student_code}</td>
@@ -85,7 +91,18 @@ export default function AdminStudents() {
             </table>
           </div>
         )}
-      </motion.section>
+        <DataPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          startIndex={pagination.startIndex}
+          endIndex={pagination.endIndex}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          itemLabel="students"
+        />
+      </section>
 
       {editing && (
         <EditStudentModal student={editing} onClose={() => setEditing(null)} onSaved={() => {
@@ -126,9 +143,9 @@ function EditStudentModal({ student, onClose, onSaved }: { student: StudentOut; 
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Status</Label>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+            <NativeSelect value={status} onChange={(e) => setStatus(e.target.value)}>
               {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </NativeSelect>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">

@@ -1,13 +1,10 @@
 import { useMemo } from "react";
-import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
 } from "recharts";
-import { Users, GraduationCap, BookOpen, ReceiptText } from "lucide-react";
 
-import { PageHeader } from "@/components/ui/page-header";
 import { usersApi, studentsApi, coursesApi, offeringsApi, financeApi } from "@/lib/api";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -75,14 +72,17 @@ export default function AdminAnalytics() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Analytics" description="System-wide metrics and breakdowns" />
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Analytics</h2>
+        <p className="text-sm text-muted-foreground">System-wide metrics and breakdowns</p>
+      </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric icon={Users} label="Total accounts" value={String(users.length)} />
-        <Metric icon={GraduationCap} label="Average GPA" value={avgGpa.toFixed(2)} />
-        <Metric icon={BookOpen} label="Active offerings" value={String(offerings.filter((o) => o.status === "active").length)} />
-        <Metric icon={ReceiptText} label="Collection rate" value={`${financeStats.collectionRate}%`} />
-      </section>
+      <div className="grid grid-cols-2 divide-x divide-y rounded-lg border lg:grid-cols-4">
+        <Metric label="Total accounts" value={String(users.length)} />
+        <Metric label="Average GPA" value={avgGpa.toFixed(2)} />
+        <Metric label="Active offerings" value={String(offerings.filter((o) => o.status === "active").length)} />
+        <Metric label="Collection rate" value={`${financeStats.collectionRate}%`} />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Accounts by role">
@@ -136,23 +136,18 @@ export default function AdminAnalytics() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border bg-card p-5 shadow-card">
-      <h3 className="mb-4 font-semibold text-foreground">{title}</h3>
-      {children}
-    </motion.div>
+    <div className="overflow-hidden rounded-lg border">
+      <div className="border-b px-4 py-2.5 text-xs font-medium text-muted-foreground">{title}</div>
+      <div className="p-4">{children}</div>
+    </div>
   );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border bg-gradient-to-br from-primary/10 to-primary/5 p-5 shadow-card">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-foreground">{value}</p>
-        </div>
-        <div className="rounded-lg bg-background/60 p-2 backdrop-blur"><Icon className="h-5 w-5 text-foreground" /></div>
-      </div>
+    <div className="p-4">
+      <p className="text-2xl font-semibold text-foreground">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -160,7 +155,7 @@ function Metric({ icon: Icon, label, value }: { icon: React.ElementType; label: 
 function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "warning" }) {
   const cls = tone === "success" ? "text-success" : tone === "warning" ? "text-warning" : "text-foreground";
   return (
-    <div className="rounded-lg border bg-muted/30 p-4">
+    <div className="rounded-lg border p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`mt-1 font-mono text-lg font-semibold ${cls}`}>{value}</p>
     </div>

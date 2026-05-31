@@ -1097,14 +1097,14 @@ export const semestersApi = {
 export const usersApi = {
   list: () => api.get<UserOut[]>("/users"),
   pending: () => api.get<UserOut[]>("/users/pending"),
-  create: (data: { email: string; password: string; role: string }) =>
-    api.post<UserOut>("/users", data),
+  create: (data: { email: string; password: string; role: string; full_name?: string }) =>
+    api.post<UserOut & { email_sent?: boolean }>("/users", data),
   approve: (id: number, role: string) =>
-    api.post<UserOut>(`/users/${id}/approve`, { role }),
+    api.post<UserOut & { email_sent?: boolean }>(`/users/${id}/approve`, { role }),
   refuse: (id: number, reason?: string) =>
-    api.post<{ message: string }>(`/users/${id}/refuse`, { reason }),
+    api.post<{ message: string; email_sent?: boolean }>(`/users/${id}/refuse`, { reason }),
   update: (id: number, data: { role?: string; is_active?: boolean }) =>
-    api.patch<UserOut>(`/users/${id}`, data),
+    api.patch<UserOut & { email_sent?: boolean }>(`/users/${id}`, data),
   resetPassword: (id: number) =>
-    api.post<{ message: string }>(`/users/${id}/reset-password`, {}),
+    api.post<{ message: string; email_sent?: boolean }>(`/users/${id}/reset-password`, {}),
 };
