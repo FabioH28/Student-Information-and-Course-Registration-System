@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Def_Announcement"
+                  targetNamespace="http://cis.edu/bpmn">
+  <bpmn:collaboration id="Collab_Ann">
+    <bpmn:participant id="Pool_C" name="Communications Staff" processRef="Proc_C"/>
+    <bpmn:participant id="Pool_Sys" name="CIS Backend" processRef="Proc_Sys"/>
+    <bpmn:participant id="Pool_U" name="Users (scoped audience)" processRef="Proc_U"/>
+    <bpmn:messageFlow id="m1" sourceRef="Task_Save" targetRef="Task_Insert"/>
+    <bpmn:messageFlow id="m2" sourceRef="Task_Publish" targetRef="Task_Flip"/>
+    <bpmn:messageFlow id="m3" sourceRef="Task_Flip" targetRef="Event_Receive"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Proc_C" isExecutable="false">
+    <bpmn:startEvent id="E_CStart" name="Draft requested"/>
+    <bpmn:task id="Task_Compose" name="Compose title + body"/>
+    <bpmn:task id="Task_Scope" name="Set scope (faculty/program/all)"/>
+    <bpmn:task id="Task_Save" name="Save draft"/>
+    <bpmn:exclusiveGateway id="GW_Schedule" name="Schedule?"/>
+    <bpmn:task id="Task_Wait" name="Wait for publish_at"/>
+    <bpmn:task id="Task_Publish" name="Publish now"/>
+    <bpmn:endEvent id="E_CEnd"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="E_CStart" targetRef="Task_Compose"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="Task_Compose" targetRef="Task_Scope"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="Task_Scope" targetRef="Task_Save"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="Task_Save" targetRef="GW_Schedule"/>
+    <bpmn:sequenceFlow id="f5" name="Yes" sourceRef="GW_Schedule" targetRef="Task_Wait"/>
+    <bpmn:sequenceFlow id="f6" name="No" sourceRef="GW_Schedule" targetRef="Task_Publish"/>
+    <bpmn:sequenceFlow id="f7" sourceRef="Task_Wait" targetRef="Task_Publish"/>
+    <bpmn:sequenceFlow id="f8" sourceRef="Task_Publish" targetRef="E_CEnd"/>
+  </bpmn:process>
+
+  <bpmn:process id="Proc_Sys" isExecutable="false">
+    <bpmn:task id="Task_Insert" name="INSERT announcement is_published=false"/>
+    <bpmn:task id="Task_Flip" name="Set is_published=true, published_at"/>
+    <bpmn:task id="Task_Notify" name="Insert notifications for audience"/>
+    <bpmn:endEvent id="E_SysEnd"/>
+    <bpmn:sequenceFlow id="g1" sourceRef="Task_Insert" targetRef="Task_Flip"/>
+    <bpmn:sequenceFlow id="g2" sourceRef="Task_Flip" targetRef="Task_Notify"/>
+    <bpmn:sequenceFlow id="g3" sourceRef="Task_Notify" targetRef="E_SysEnd"/>
+  </bpmn:process>
+
+  <bpmn:process id="Proc_U" isExecutable="false">
+    <bpmn:intermediateCatchEvent id="Event_Receive" name="Announcement published"/>
+    <bpmn:task id="Task_OpenNews" name="Open /student/news"/>
+    <bpmn:endEvent id="E_UEnd" name="Read announcement"/>
+    <bpmn:sequenceFlow id="h1" sourceRef="Event_Receive" targetRef="Task_OpenNews"/>
+    <bpmn:sequenceFlow id="h2" sourceRef="Task_OpenNews" targetRef="E_UEnd"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="DI">
+    <bpmndi:BPMNPlane id="P" bpmnElement="Collab_Ann">
+      <bpmndi:BPMNShape id="Pool_C_di" bpmnElement="Pool_C" isHorizontal="true">
+        <dc:Bounds x="100" y="40" width="1380" height="180"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_CStart_di" bpmnElement="E_CStart">
+        <dc:Bounds x="160" y="110" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="135" y="150" width="90" height="30"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Compose_di" bpmnElement="Task_Compose">
+        <dc:Bounds x="240" y="90" width="140" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Scope_di" bpmnElement="Task_Scope">
+        <dc:Bounds x="420" y="90" width="180" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Save_di" bpmnElement="Task_Save">
+        <dc:Bounds x="640" y="90" width="120" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Schedule_di" bpmnElement="GW_Schedule" isMarkerVisible="true">
+        <dc:Bounds x="800" y="108" width="40" height="40"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="795" y="155" width="50" height="20"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Wait_di" bpmnElement="Task_Wait">
+        <dc:Bounds x="880" y="50" width="160" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Publish_di" bpmnElement="Task_Publish">
+        <dc:Bounds x="1080" y="90" width="140" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_CEnd_di" bpmnElement="E_CEnd">
+        <dc:Bounds x="1260" y="110" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Pool_Sys_di" bpmnElement="Pool_Sys" isHorizontal="true">
+        <dc:Bounds x="100" y="240" width="1380" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Insert_di" bpmnElement="Task_Insert">
+        <dc:Bounds x="640" y="280" width="240" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Flip_di" bpmnElement="Task_Flip">
+        <dc:Bounds x="910" y="280" width="220" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Notify_di" bpmnElement="Task_Notify">
+        <dc:Bounds x="1160" y="280" width="220" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_SysEnd_di" bpmnElement="E_SysEnd">
+        <dc:Bounds x="1410" y="300" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Pool_U_di" bpmnElement="Pool_U" isHorizontal="true">
+        <dc:Bounds x="100" y="420" width="1380" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Receive_di" bpmnElement="Event_Receive">
+        <dc:Bounds x="970" y="480" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="935" y="520" width="120" height="30"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OpenNews_di" bpmnElement="Task_OpenNews">
+        <dc:Bounds x="1060" y="460" width="160" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_UEnd_di" bpmnElement="E_UEnd">
+        <dc:Bounds x="1260" y="480" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1230" y="520" width="100" height="30"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

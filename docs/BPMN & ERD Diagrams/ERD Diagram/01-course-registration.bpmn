@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Def_CourseRegistration"
+                  targetNamespace="http://cis.edu/bpmn">
+  <bpmn:collaboration id="Collab_CourseRegistration">
+    <bpmn:participant id="Pool_Student" name="Student" processRef="Proc_Student"/>
+    <bpmn:participant id="Pool_System" name="CIS Backend" processRef="Proc_System"/>
+    <bpmn:participant id="Pool_Staff" name="Academic Staff" processRef="Proc_Staff"/>
+    <bpmn:messageFlow id="MF1" sourceRef="Task_SubmitSelection" targetRef="Task_ValidateRequest"/>
+    <bpmn:messageFlow id="MF2" sourceRef="Task_NotifyStaff" targetRef="Task_ReviewQueue"/>
+    <bpmn:messageFlow id="MF3" sourceRef="Task_ApproveSelection" targetRef="Task_CreateRegistration"/>
+    <bpmn:messageFlow id="MF4" sourceRef="Task_CreateRegistration" targetRef="Event_StudentNotified"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Proc_Student" isExecutable="false">
+    <bpmn:startEvent id="Event_StartStudent" name="Open Registration"/>
+    <bpmn:task id="Task_BrowseCatalog" name="Browse course catalog"/>
+    <bpmn:task id="Task_PickOffering" name="Select offering"/>
+    <bpmn:task id="Task_SubmitSelection" name="Submit selection request"/>
+    <bpmn:intermediateCatchEvent id="Event_StudentNotified" name="Receive approval / rejection"/>
+    <bpmn:endEvent id="Event_EndStudent" name="Registration complete"/>
+    <bpmn:sequenceFlow id="S1" sourceRef="Event_StartStudent" targetRef="Task_BrowseCatalog"/>
+    <bpmn:sequenceFlow id="S2" sourceRef="Task_BrowseCatalog" targetRef="Task_PickOffering"/>
+    <bpmn:sequenceFlow id="S3" sourceRef="Task_PickOffering" targetRef="Task_SubmitSelection"/>
+    <bpmn:sequenceFlow id="S4" sourceRef="Task_SubmitSelection" targetRef="Event_StudentNotified"/>
+    <bpmn:sequenceFlow id="S5" sourceRef="Event_StudentNotified" targetRef="Event_EndStudent"/>
+  </bpmn:process>
+
+  <bpmn:process id="Proc_System" isExecutable="false">
+    <bpmn:task id="Task_ValidateRequest" name="Validate prereq, hold, conflict"/>
+    <bpmn:exclusiveGateway id="GW_Valid" name="Valid?"/>
+    <bpmn:task id="Task_RejectRequest" name="Reject with reason"/>
+    <bpmn:task id="Task_StorePending" name="Store selection (status=requested)"/>
+    <bpmn:task id="Task_NotifyStaff" name="Notify academic staff"/>
+    <bpmn:task id="Task_CreateRegistration" name="Create registration row"/>
+    <bpmn:endEvent id="Event_EndSystem"/>
+    <bpmn:sequenceFlow id="S10" sourceRef="Task_ValidateRequest" targetRef="GW_Valid"/>
+    <bpmn:sequenceFlow id="S11" name="No" sourceRef="GW_Valid" targetRef="Task_RejectRequest"/>
+    <bpmn:sequenceFlow id="S12" name="Yes" sourceRef="GW_Valid" targetRef="Task_StorePending"/>
+    <bpmn:sequenceFlow id="S13" sourceRef="Task_StorePending" targetRef="Task_NotifyStaff"/>
+    <bpmn:sequenceFlow id="S14" sourceRef="Task_NotifyStaff" targetRef="Task_CreateRegistration"/>
+    <bpmn:sequenceFlow id="S15" sourceRef="Task_CreateRegistration" targetRef="Event_EndSystem"/>
+    <bpmn:sequenceFlow id="S16" sourceRef="Task_RejectRequest" targetRef="Event_EndSystem"/>
+  </bpmn:process>
+
+  <bpmn:process id="Proc_Staff" isExecutable="false">
+    <bpmn:startEvent id="Event_StartStaff" name="Pending requests"/>
+    <bpmn:task id="Task_ReviewQueue" name="Review queue"/>
+    <bpmn:exclusiveGateway id="GW_Approve" name="Approve?"/>
+    <bpmn:task id="Task_RejectSelection" name="Mark rejected (reason)"/>
+    <bpmn:task id="Task_ApproveSelection" name="Mark approved"/>
+    <bpmn:endEvent id="Event_EndStaff"/>
+    <bpmn:sequenceFlow id="S20" sourceRef="Event_StartStaff" targetRef="Task_ReviewQueue"/>
+    <bpmn:sequenceFlow id="S21" sourceRef="Task_ReviewQueue" targetRef="GW_Approve"/>
+    <bpmn:sequenceFlow id="S22" name="No" sourceRef="GW_Approve" targetRef="Task_RejectSelection"/>
+    <bpmn:sequenceFlow id="S23" name="Yes" sourceRef="GW_Approve" targetRef="Task_ApproveSelection"/>
+    <bpmn:sequenceFlow id="S24" sourceRef="Task_RejectSelection" targetRef="Event_EndStaff"/>
+    <bpmn:sequenceFlow id="S25" sourceRef="Task_ApproveSelection" targetRef="Event_EndStaff"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collab_CourseRegistration">
+      <bpmndi:BPMNShape id="Pool_Student_di" bpmnElement="Pool_Student" isHorizontal="true">
+        <dc:Bounds x="100" y="40" width="1200" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_StartStudent_di" bpmnElement="Event_StartStudent">
+        <dc:Bounds x="160" y="100" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="140" y="140" width="80" height="30"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BrowseCatalog_di" bpmnElement="Task_BrowseCatalog">
+        <dc:Bounds x="240" y="80" width="120" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PickOffering_di" bpmnElement="Task_PickOffering">
+        <dc:Bounds x="400" y="80" width="120" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubmitSelection_di" bpmnElement="Task_SubmitSelection">
+        <dc:Bounds x="560" y="80" width="140" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_StudentNotified_di" bpmnElement="Event_StudentNotified">
+        <dc:Bounds x="1120" y="100" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1080" y="140" width="120" height="30"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_EndStudent_di" bpmnElement="Event_EndStudent">
+        <dc:Bounds x="1220" y="100" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1195" y="140" width="100" height="30"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Pool_System_di" bpmnElement="Pool_System" isHorizontal="true">
+        <dc:Bounds x="100" y="220" width="1200" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidateRequest_di" bpmnElement="Task_ValidateRequest">
+        <dc:Bounds x="560" y="260" width="140" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Valid_di" bpmnElement="GW_Valid" isMarkerVisible="true">
+        <dc:Bounds x="740" y="278" width="40" height="40"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="745" y="325" width="30" height="20"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RejectRequest_di" bpmnElement="Task_RejectRequest">
+        <dc:Bounds x="820" y="220" width="120" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StorePending_di" bpmnElement="Task_StorePending">
+        <dc:Bounds x="820" y="305" width="160" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyStaff_di" bpmnElement="Task_NotifyStaff">
+        <dc:Bounds x="1000" y="305" width="140" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateRegistration_di" bpmnElement="Task_CreateRegistration">
+        <dc:Bounds x="1160" y="260" width="120" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Pool_Staff_di" bpmnElement="Pool_Staff" isHorizontal="true">
+        <dc:Bounds x="100" y="400" width="1200" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_StartStaff_di" bpmnElement="Event_StartStaff">
+        <dc:Bounds x="780" y="460" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="760" y="500" width="80" height="30"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewQueue_di" bpmnElement="Task_ReviewQueue">
+        <dc:Bounds x="860" y="440" width="120" height="76"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Approve_di" bpmnElement="GW_Approve" isMarkerVisible="true">
+        <dc:Bounds x="1020" y="458" width="40" height="40"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1015" y="505" width="50" height="20"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RejectSelection_di" bpmnElement="Task_RejectSelection">
+        <dc:Bounds x="1100" y="410" width="140" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ApproveSelection_di" bpmnElement="Task_ApproveSelection">
+        <dc:Bounds x="1100" y="485" width="140" height="60"/>
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
