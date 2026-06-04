@@ -1,0 +1,662 @@
+// CIS — Campus Information System
+// Paste this at https://dbdiagram.io for a visual ERD.
+// 48 tables · 5 roles · 10 domains
+//
+// Roles (canonical): student, instructor, academic_staff, finance_staff, system_admin
+// Aliases normalized server-side: teacher→instructor, staff→academic_staff, admin→system_admin
+
+Project CIS {
+  database_type: 'MySQL'
+  Note: 'Student Information & Course Registration System'
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 1. IDENTITY & SECURITY
+// ────────────────────────────────────────────────────────────────────────────
+
+Table users {
+  id              int [pk, increment]
+  email           varchar(255) [unique, not null]
+  full_name       varchar(255)
+  password_hash   varchar(512) [not null]
+  role            varchar(50)  [not null, note: 'student | teacher | staff | finance_staff | admin']
+  status          varchar(30)  [not null, default: 'active']
+  is_first_login  boolean      [not null, default: true]
+  is_active       boolean      [not null, default: true]
+  created_at      datetime     [not null]
+}
+
+Table students {
+  id                int [pk, increment]
+  user_id           int [not null, ref: - users.id]
+  student_code      varchar(30)  [unique, not null]
+  first_name        varchar(100) [not null]
+  last_name         varchar(100) [not null]
+  phone             varchar(30)
+  date_of_birth     date
+  program_id        int [not null, ref: > programs.id]
+  current_semester  int [not null, default: 1]
+  gpa               decimal(3,2) [default: 0]
+  status            varchar(30)  [not null, default: 'active']
+}
+
+Table instructors {
+  id              int [pk, increment]
+  user_id         int [not null, ref: - users.id]
+  first_name      varchar(100) [not null]
+  last_name       varchar(100) [not null]
+  title           varchar(50)
+  department_id   int [ref: > departments.id]
+}
+
+Table staff_profiles {
+  id          int [pk, increment]
+  user_id     int [not null, ref: - users.id]
+  faculty_id  int [ref: > faculties.id]
+  position    varchar(100)
+  scope       varchar(20) [note: 'faculty | university']
+}
+
+Table staff_faculty_scopes {
+  id          int [pk, increment]
+  user_id     int [not null, ref: > users.id]
+  faculty_id  int [not null, ref: > faculties.id]
+  scope       varchar(20)
+}
+
+Table finance_faculty_scopes {
+  id          int [pk, increment]
+  user_id     int [not null, ref: > users.id]
+  faculty_id  int [not null, ref: > faculties.id]
+  scope       varchar(20)
+}
+
+Table teacher_faculty_assignments {
+  id            int [pk, increment]
+  instructor_id int [not null, ref: > instructors.id]
+  faculty_id    int [not null, ref: > faculties.id]
+}
+
+Table email_verification_tokens {
+  id          int [pk, increment]
+  user_id     int [not null, ref: > users.id]
+  token       varchar(255) [unique, not null]
+  expires_at  datetime [not null]
+  used_at     datetime
+  created_at  datetime [not null]
+}
+
+Table password_reset_tokens {
+  id          int [pk, increment]
+  user_id     int [not null, ref: > users.id]
+  token       varchar(255) [unique, not null]
+  expires_at  datetime [not null]
+  used_at     datetime
+  created_at  datetime [not null]
+}
+
+Table audit_logs {
+  id          int [pk, increment]
+  user_id     int [ref: > users.id]
+  action      varchar(100) [not null]
+  entity_type varchar(100)
+  entity_id   int
+  details     text
+  created_at  datetime [not null]
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2. ORG STRUCTURE & RESOURCES
+// ────────────────────────────────────────────────────────────────────────────
+
+Table faculties {
+  id   int [pk, increment]
+  code varchar(20)  [unique, not null]
+  name varchar(150) [not null]
+}
+
+Table departments {
+  id          int [pk, increment]
+  faculty_id  int [ref: > faculties.id]
+  code        varchar(20)  [unique, not null]
+  name        varchar(150) [not null]
+}
+
+Table programs {
+  id                  int [pk, increment]
+  department_id       int [not null, ref: > departments.id]
+  code                varchar(20)  [unique, not null]
+  name                varchar(150) [not null]
+  total_credits       int  [default: 180]
+  duration_semesters  int  [default: 6]
+}
+
+Table semesters {
+  id                    int [pk, increment]
+  name                  varchar(100) [not null]
+  start_date            date [not null]
+  end_date              date [not null]
+  registration_deadline date [not null]
+  drop_deadline         date [not null]
+  total_weeks           int  [not null, default: 14]
+  is_active             boolean [not null, default: false]
+}
+
+Table buildings {
+  id   int [pk, increment]
+  code varchar(20)  [unique, not null]
+  name varchar(150) [not null]
+}
+
+Table classrooms {
+  id          int [pk, increment]
+  building_id int [not null, ref: > buildings.id]
+  name        varchar(100) [not null]
+  room_type   varchar(30) [note: 'classroom | lab | auditorium']
+  capacity    int
+}
+
+Table groups {
+  id            int [pk, increment]
+  program_id    int [ref: > programs.id]
+  name          varchar(50) [not null]
+  academic_year varchar(50)
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 3. COURSE CATALOG
+// ────────────────────────────────────────────────────────────────────────────
+
+Table courses {
+  id                       int [pk, increment]
+  code                     varchar(20)  [unique, not null]
+  name                     varchar(150) [not null]
+  description              text
+  credits                  int  [not null]
+  department_id            int  [not null, ref: > departments.id]
+  prerequisite_course_id   int  [ref: > courses.id]
+}
+
+Table course_prerequisites {
+  id              int [pk, increment]
+  course_id       int [not null, ref: > courses.id]
+  prerequisite_id int [not null, ref: > courses.id]
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 4. OFFERINGS & SCHEDULING
+// ────────────────────────────────────────────────────────────────────────────
+
+Table offerings {
+  id                    int [pk, increment]
+  course_id             int [not null, ref: > courses.id]
+  instructor_id         int [not null, ref: > instructors.id]
+  semester_id           int [not null, ref: > semesters.id]
+  program_id            int [not null, ref: > programs.id]
+  faculty_id            int [ref: > faculties.id]
+  created_by_staff_id   int [ref: > staff_profiles.id]
+  academic_year         varchar(50)
+  academic_period       varchar(50)
+  group_name            varchar(50)
+  room                  varchar(50)
+  schedule              varchar(255)
+  capacity              int [not null]
+  enrolled              int [not null, default: 0]
+  enrollment_open       boolean [not null, default: true]
+  selection_deadline    date
+  status                varchar(30) [not null, default: 'active']
+
+  indexes {
+    (course_id, semester_id, program_id) [unique, name: 'uq_offering']
+  }
+}
+
+Table timetable_entries {
+  id                  int [pk, increment]
+  course_offering_id  int [not null, ref: > offerings.id]
+  building_id         int [ref: > buildings.id]
+  room_id             int [ref: > classrooms.id]
+  group_id            int [ref: > groups.id]
+  timetable_date      date
+  day_of_week         varchar(15) [not null]
+  start_time          time [not null]
+  end_time            time [not null]
+  teaching_hours      int
+  is_published        boolean [not null, default: true]
+}
+
+Table class_sessions {
+  id                  int [pk, increment]
+  timetable_entry_id  int [ref: > timetable_entries.id]
+  course_offering_id  int [not null, ref: > offerings.id]
+  session_date        date [not null]
+  week_number         int
+  topic_title         varchar(255)
+  topic_description   text
+  status              varchar(30) [default: 'planned', note: 'planned | started | completed | cancelled']
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 5. ENROLLMENT FLOW
+// ────────────────────────────────────────────────────────────────────────────
+
+Table student_course_selections {
+  id                  int [pk, increment]
+  student_id          int [not null, ref: > students.id]
+  course_offering_id  int [not null, ref: > offerings.id]
+  status              varchar(30) [not null, default: 'pending', note: 'pending | approved | rejected | enrolled | dropped | waitlisted']
+  reason              text
+  selected_at         datetime [not null]
+  approved_at         datetime
+  approved_by_user_id int [ref: > users.id]
+}
+
+Table registrations {
+  id                    int [pk, increment]
+  student_id            int [not null, ref: > students.id]
+  offering_id           int [not null, ref: > offerings.id]
+  status                varchar(30) [not null, default: 'active', note: 'active | dropped | withdrawn | completed']
+  registered_at         datetime [not null]
+  attendance_percentage decimal(5,2)
+
+  indexes {
+    (student_id, offering_id) [unique]
+  }
+}
+
+Table student_course_status {
+  id            int [pk, increment]
+  student_id    int [not null, ref: > students.id]
+  course_id     int [not null, ref: > courses.id]
+  status        varchar(30) [note: 'passed | failed | in_progress']
+  semester_id   int [ref: > semesters.id]
+  final_grade   decimal(4,2)
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 6. ACADEMIC CONTENT (materials · topics · assignments)
+// ────────────────────────────────────────────────────────────────────────────
+
+Table weekly_topics {
+  id                  int [pk, increment]
+  course_offering_id  int [not null, ref: > offerings.id]
+  course_id           int [not null, ref: > courses.id]
+  teacher_id          int [not null, ref: > instructors.id]
+  week_number         int [not null]
+  topic_title         varchar(255) [not null]
+  topic_description   text
+  created_at          datetime [not null]
+  updated_at          datetime [not null]
+}
+
+Table course_week_topics {
+  id                  int [pk, increment]
+  course_offering_id  int [not null, ref: > offerings.id]
+  week_number         int [not null]
+  topic_title         varchar(255) [not null]
+  description         text
+}
+
+Table course_materials {
+  id                    int [pk, increment]
+  offering_id           int [not null, ref: > offerings.id]
+  teacher_id            int [not null, ref: > instructors.id]
+  course_week_topic_id  int [ref: > course_week_topics.id]
+  week_number           int [not null]
+  title                 varchar(255) [not null]
+  description           text
+  material_kind         varchar(30) [note: 'file | link | video | text']
+  external_url          varchar(500)
+  text_content          text
+  original_file_name    varchar(255)
+  file_mime_type        varchar(100)
+  file_size             int
+  status                varchar(30) [note: 'draft | scheduled | published | hidden']
+  publish_at            datetime
+  published_at          datetime
+  created_at            datetime [not null]
+}
+
+Table weekly_tasks {
+  id            int [pk, increment]
+  offering_id   int [not null, ref: > offerings.id]
+  teacher_id    int [not null, ref: > instructors.id]
+  week_number   int [not null]
+  title         varchar(255) [not null]
+  description   text
+  due_date      datetime
+  max_points    int
+}
+
+Table assignments {
+  id                       int [pk, increment]
+  course_offering_id       int [not null, ref: > offerings.id]
+  course_id                int [not null, ref: > courses.id]
+  teacher_id               int [not null, ref: > instructors.id]
+  week_number              int [not null]
+  weekly_topic_id          int [ref: > weekly_topics.id]
+  course_week_topic_id     int [ref: > course_week_topics.id]
+  title                    varchar(255) [not null]
+  description              text
+  instructions             text
+  start_at                 datetime
+  end_at                   datetime
+  due_date                 date
+  due_time                 time
+  max_points               int [not null, default: 100]
+  attachment_original_name varchar(255)
+  status                   varchar(30) [note: 'draft | scheduled | published | hidden']
+}
+
+Table assignment_submissions {
+  id                           int [pk, increment]
+  assignment_id                int [not null, ref: > assignments.id]
+  student_id                   int [not null, ref: > students.id]
+  submitted_text               text
+  submitted_file_original_name varchar(255)
+  submitted_at                 datetime
+  score                        decimal(5,2)
+  feedback                     text
+  status                       varchar(30) [default: 'submitted']
+  is_published                 boolean [default: false]
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 7. ATTENDANCE & GRADES
+// ────────────────────────────────────────────────────────────────────────────
+
+Table attendance_sessions {
+  id            int [pk, increment]
+  offering_id   int [not null, ref: > offerings.id]
+  session_date  date [not null]
+  week_number   int
+  topic         varchar(255)
+  created_at    datetime [not null]
+}
+
+Table attendance_records {
+  id                  int [pk, increment]
+  session_id          int [ref: > attendance_sessions.id]
+  timetable_entry_id  int [ref: > timetable_entries.id]
+  student_id          int [not null, ref: > students.id]
+  status              varchar(20) [not null, note: 'present | absent | late | excused']
+  notes               text
+}
+
+Table course_grade_configurations {
+  id                  int [pk, increment]
+  course_offering_id  int [not null, unique, ref: > offerings.id]
+  course_id           int [ref: > courses.id]
+  teacher_id          int [ref: > instructors.id]
+  semester_id         int [ref: > semesters.id]
+  academic_year       varchar(50)
+  total_points        decimal(5,2) [not null, default: 100]
+}
+
+Table grades {
+  id                                  int [pk, increment]
+  registration_id                     int [not null, unique, ref: > registrations.id]
+  midterm_score                       decimal(5,2)
+  assignment_score                    decimal(5,2)
+  project_score                       decimal(5,2)
+  quiz_score                          decimal(5,2)
+  final_exam_score                    decimal(5,2)
+  attendance_score                    decimal(5,2)
+  participation_score                 decimal(5,2)
+  lab_work_score                      decimal(5,2)
+  total_score                         decimal(5,2)
+  letter_grade                        varchar(5)
+  final_grade                         int
+  pass_status                         varchar(20) [note: 'passed | failed | pending']
+  exam_blocked_due_to_absence         boolean [default: false]
+  absence_percentage                  decimal(5,2)
+  can_take_exam                       boolean [default: true]
+  failure_reason                      text
+  retake_allowed_next_academic_year   boolean [default: false]
+  feedback                            text
+  is_published                        boolean [default: false]
+  updated_at                          datetime
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 8. FINANCE
+// ────────────────────────────────────────────────────────────────────────────
+
+Table invoices {
+  id           int [pk, increment]
+  student_id   int [not null, ref: > students.id]
+  semester_id  int [not null, ref: > semesters.id]
+  description  varchar(255) [not null]
+  amount       decimal(10,2) [not null]
+  amount_paid  decimal(10,2) [not null, default: 0]
+  due_date     date [not null]
+  status       varchar(30) [not null, default: 'unpaid', note: 'unpaid | partial | paid | overdue']
+  issued_at    datetime [not null]
+}
+
+Table payments {
+  id           int [pk, increment]
+  invoice_id   int [not null, ref: > invoices.id]
+  recorded_by  int [ref: > users.id]
+  amount       decimal(10,2) [not null]
+  method       varchar(30) [note: 'bank_transfer | cash | card | cheque | other']
+  reference    varchar(255)
+  paid_at      datetime [not null]
+}
+
+Table holds {
+  id           int [pk, increment]
+  student_id   int [not null, ref: > students.id]
+  invoice_id   int [ref: > invoices.id]
+  reason       text [not null]
+  effect       varchar(50) [note: 'block_registration | block_grades | block_transcript | warning']
+  is_active    boolean [not null, default: true]
+  created_by   int [ref: > users.id]
+  created_at   datetime [not null]
+  resolved_by  int [ref: > users.id]
+  resolved_at  datetime
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 9. COMMUNICATIONS · NEWS · CLUBS · MESSAGING
+// ────────────────────────────────────────────────────────────────────────────
+
+Table announcements {
+  id            int [pk, increment]
+  created_by    int [not null, ref: > users.id]
+  title         varchar(255) [not null]
+  content       text [not null]
+  target_role   varchar(50)
+  published_at  datetime [not null]
+}
+
+Table notifications {
+  id          int [pk, increment]
+  user_id     int [not null, ref: > users.id]
+  title       varchar(255) [not null]
+  message     text [not null]
+  type        varchar(30) [default: 'info']
+  is_read     boolean [not null, default: false]
+  created_at  datetime [not null]
+}
+
+Table messages {
+  id            int [pk, increment]
+  sender_id     int [not null, ref: > users.id]
+  recipient_id  int [ref: > users.id]
+  subject       varchar(255) [not null]
+  body          text [not null]
+  is_broadcast  boolean [not null, default: false]
+  sent_at       datetime [not null]
+  read_at       datetime
+}
+
+Table club_categories {
+  id    int [pk, increment]
+  name  varchar(100) [not null]
+}
+
+Table clubs {
+  id                    int [pk, increment]
+  code                  varchar(30) [unique, not null]
+  name                  varchar(150) [not null]
+  category_id           int [ref: > club_categories.id]
+  description           text
+  status                varchar(20) [not null, default: 'active']
+  join_mode             varchar(20) [not null, note: 'open | request | waitlist']
+  advisor_instructor_id int [ref: > instructors.id]
+  meeting_day_of_week   varchar(15)
+  meeting_start_time    time
+  meeting_end_time      time
+  meeting_location      varchar(150)
+  created_at            datetime [not null]
+}
+
+Table club_memberships {
+  id            int [pk, increment]
+  club_id       int [not null, ref: > clubs.id]
+  student_id    int [not null, ref: > students.id]
+  member_role   varchar(30) [default: 'member']
+  status        varchar(20) [not null, default: 'pending', note: 'pending | active | waitlisted | rejected']
+  submitted_at  datetime
+  reviewed_at   datetime
+  joined_at     datetime
+  created_at    datetime [not null]
+}
+
+Table campus_events {
+  id                     int [pk, increment]
+  club_id                int [ref: > clubs.id]
+  title                  varchar(255) [not null]
+  description            text
+  organizer_name         varchar(150) [not null]
+  event_type             varchar(50) [default: 'event']
+  location_name          varchar(150)
+  delivery_mode          varchar(20) [default: 'onsite']
+  starts_at              datetime [not null]
+  ends_at                datetime
+  status                 varchar(30) [default: 'scheduled']
+  registration_required  boolean [default: false]
+  capacity               int
+}
+
+Table event_registrations {
+  id             int [pk, increment]
+  event_id       int [not null, ref: > campus_events.id]
+  user_id        int [not null, ref: > users.id]
+  status         varchar(20) [not null, default: 'registered', note: 'registered | waitlisted | cancelled']
+  registered_at  datetime [not null]
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// 10. AI ACADEMIC ASSISTANT (chatbot history — local Ollama integration)
+// ────────────────────────────────────────────────────────────────────────────
+
+Table ai_chat_sessions {
+  id          int [pk, increment]
+  user_id     int [not null, ref: > users.id]
+  title       varchar(255) [not null, default: 'Academic chat']
+  created_at  datetime [not null]
+  updated_at  datetime [not null]
+}
+
+Table ai_chat_messages {
+  id          int [pk, increment]
+  session_id  int [not null, ref: > ai_chat_sessions.id]
+  role        varchar(20) [not null, note: 'user | assistant | system']
+  content     text [not null]
+  created_at  datetime [not null]
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// TABLE GROUPS for cleaner dbdiagram.io layout
+// ════════════════════════════════════════════════════════════════════════════
+
+TableGroup "1 · Identity & Security" {
+  users
+  students
+  instructors
+  staff_profiles
+  staff_faculty_scopes
+  finance_faculty_scopes
+  teacher_faculty_assignments
+  email_verification_tokens
+  password_reset_tokens
+  audit_logs
+}
+
+TableGroup "2 · Org Structure" {
+  faculties
+  departments
+  programs
+  semesters
+  buildings
+  classrooms
+  groups
+}
+
+TableGroup "3 · Catalog" {
+  courses
+  course_prerequisites
+}
+
+TableGroup "4 · Offerings & Scheduling" {
+  offerings
+  timetable_entries
+  class_sessions
+}
+
+TableGroup "5 · Enrollment" {
+  student_course_selections
+  registrations
+  student_course_status
+}
+
+TableGroup "6 · Academic Content" {
+  weekly_topics
+  course_week_topics
+  course_materials
+  weekly_tasks
+  assignments
+  assignment_submissions
+}
+
+TableGroup "7 · Attendance & Grades" {
+  attendance_sessions
+  attendance_records
+  course_grade_configurations
+  grades
+}
+
+TableGroup "8 · Finance" {
+  invoices
+  payments
+  holds
+}
+
+TableGroup "9 · Communications" {
+  announcements
+  notifications
+  messages
+  club_categories
+  clubs
+  club_memberships
+  campus_events
+  event_registrations
+}
+
+TableGroup "10 · AI Assistant" {
+  ai_chat_sessions
+  ai_chat_messages
+}
