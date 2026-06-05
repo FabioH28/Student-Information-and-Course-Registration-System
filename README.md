@@ -181,7 +181,7 @@ All seeded accounts use password: **`password123`**
 | Finance Staff | `finance.csit@cis.edu` |
 | System Admin | `admin@cis.edu` |
 
-Additional seeded accounts (students, instructors, staff per faculty) are listed in [docs/DEMO_LOGIN_CREDENTIALS.txt](docs/DEMO_LOGIN_CREDENTIALS.txt). All use the same password.
+Additional seeded accounts (students, instructors, staff per faculty) are listed in [docs/DEMO_LOGIN_CREDENTIALS.txt](docs/DEMO_LOGIN_CREDENTIALS.txt). 
 
 > **Production note:** the seeded password is for local development only. Rotate `JWT_SECRET_KEY` and reset all account passwords before deploying.
 
